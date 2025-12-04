@@ -108,4 +108,5 @@ The helper scripts and MCP tools rely on:
 
 ## TODO
 
+- [x] Detect and switch to contact by clicking
 - [x] Scroll to get full/more history messages
