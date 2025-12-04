@@ -7,13 +7,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from .logging_config import logger
-from .llm_client import generate_reply_for_contact
-from .wechat_accessibility import (
-    ChatMessage,
-    fetch_recent_messages,
-    open_chat_for_contact,
-    send_message,
-)
+from .wechat_accessibility import ChatMessage, fetch_recent_messages, get_current_chat_name, open_chat_for_contact, send_message
 
 
 mcp = FastMCP("WeChat Helper MCP Server")
@@ -59,42 +53,50 @@ def fetch_messages_by_contact(
 @mcp.tool()
 def reply_to_messages_by_contact(
     contact_name: str,
-    instructions: str | None = None,
-    last_n: int = 50,
+    reply_message: str | None = None,
 ) -> dict[str, Any]:
     """
-    Generate and send a reply to a contact based on recent history.
+    Optionally send a reply to a contact.
 
-    This will:
-    - Open the chat with the specified contact (session list first, then search)
-    - Retrieve recent messages using the same logic as fetch_messages_by_contact
-    - Call a configured LLM to generate an appropriate reply
-    - Send that reply using the WeChat Accessibility-based send_message helper
+    This tool is designed to be driven by the LLM using this MCP:
+    - Call fetch_messages_by_contact first to inspect conversation history.
+    - Have the LLM compose a reply string.
+    - Call this tool with that reply string to send it.
+
+    If reply_message is None or empty, no message is sent; the tool still
+    ensures the chat is open.
     """
-    logger.info("Tool reply_to_messages_by_contact called for contact=%s", contact_name)
+    logger.info(
+        "Tool reply_to_messages_by_contact called for contact=%s (has_reply=%s)",
+        contact_name,
+        bool(reply_message),
+    )
     try:
-        open_chat_for_contact(contact_name)
-        messages: list[ChatMessage] = fetch_recent_messages(last_n=last_n)
-        message_dicts = [msg.to_dict() for msg in messages]
-
-        reply_text = generate_reply_for_contact(
-            contact_name=contact_name,
-            messages=message_dicts,
-            instructions=instructions,
-        )
-
-        send_message(reply_text)
-
+        current_chat = get_current_chat_name()
+        same_chat = current_chat == contact_name if current_chat is not None else False
         logger.info(
-            "Reply sent to contact=%s; message length=%d",
+            "Current chat title=%r, target=%r, same_chat=%s",
+            current_chat,
             contact_name,
-            len(reply_text),
+            same_chat,
         )
+        if not same_chat:
+            open_chat_for_contact(contact_name)
+
+        sent = False
+        if reply_message is not None and reply_message.strip():
+            send_message(reply_message)
+            sent = True
+            logger.info(
+                "Reply sent to contact=%s; message length=%d",
+                contact_name,
+                len(reply_message),
+            )
 
         return {
             "contact_name": contact_name,
-            "generated_reply": reply_text,
-            "message_count": len(message_dicts),
+            "reply_message": reply_message,
+            "sent": sent,
         }
     except Exception as exc:
         logger.exception(

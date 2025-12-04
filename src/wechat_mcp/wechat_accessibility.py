@@ -30,12 +30,15 @@ from ApplicationServices import (
 from PIL import ImageGrab
 from Quartz import (
     CGEventCreateKeyboardEvent,
+    CGEventCreateMouseEvent,
     CGEventCreateScrollWheelEvent,
     CGEventPost,
     CGEventSetFlags,
     CGEventSetLocation,
     CGPoint,
     kCGEventFlagMaskCommand,
+    kCGEventLeftMouseDown,
+    kCGEventLeftMouseUp,
     kCGHIDEventTap,
     kCGScrollEventUnitLine,
 )
@@ -89,6 +92,31 @@ def get_wechat_ax_app() -> Any:
     return AXUIElementCreateApplication(app.processIdentifier())
 
 
+def get_current_chat_name() -> str | None:
+    """
+    Return the display name of the currently open chat, if available.
+    """
+    ax_app = get_wechat_ax_app()
+
+    def is_chat_title(el, role, title, identifier):
+        return role == kAXStaticTextRole and identifier == "big_title_line_h_view"
+
+    title_el = dfs(ax_app, is_chat_title)
+    if title_el is None:
+        logger.warning("Could not locate current chat title element via AX")
+        return None
+
+    value = ax_get(title_el, kAXValueAttribute)
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+
+    title = ax_get(title_el, kAXTitleAttribute)
+    if isinstance(title, str) and title.strip():
+        return title.strip()
+
+    return None
+
+
 def collect_chat_elements(ax_app) -> dict[str, Any]:
     """
     Collect chat elements from the left session list keyed by display name.
@@ -134,6 +162,32 @@ def send_key_with_modifiers(keycode: int, flags: int):
     CGEventSetFlags(event_down, flags)
     event_up = CGEventCreateKeyboardEvent(None, keycode, False)
     CGEventSetFlags(event_up, flags)
+    CGEventPost(kCGHIDEventTap, event_down)
+    CGEventPost(kCGHIDEventTap, event_up)
+
+
+def click_element_center(element) -> None:
+    """
+    Synthesize a left mouse click at the visual center of the element.
+    """
+    pos_ref = ax_get(element, kAXPositionAttribute)
+    size_ref = ax_get(element, kAXSizeAttribute)
+    point = axvalue_to_point(pos_ref)
+    size = axvalue_to_size(size_ref)
+    if point is None or size is None:
+        raise RuntimeError("Failed to get bounds for element to click")
+
+    x, y = point
+    w, h = size
+    cx = x + w / 2.0
+    cy = y + h / 2.0
+
+    event_down = CGEventCreateMouseEvent(
+        None, kCGEventLeftMouseDown, CGPoint(cx, cy), 0
+    )
+    event_up = CGEventCreateMouseEvent(
+        None, kCGEventLeftMouseUp, CGPoint(cx, cy), 0
+    )
     CGEventPost(kCGHIDEventTap, event_down)
     CGEventPost(kCGHIDEventTap, event_up)
 
@@ -196,8 +250,8 @@ def open_chat_for_contact(contact_name: str) -> None:
 
     element = find_chat_element_by_name(ax_app, contact_name)
     if element is not None:
-        logger.info("Found chat in session list, performing AXPress")
-        AXUIElementPerformAction(element, kAXPressAction)
+        logger.info("Found chat in session list, clicking center")
+        click_element_center(element)
         time.sleep(0.3)
         return
 

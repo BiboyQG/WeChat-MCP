@@ -38,7 +38,7 @@ This project uses [`uv`](https://github.com/astral-sh/uv) for dependency and env
   <summary>Claude Code</summary>
 
 ```bash
-claude mcp add --transport stdio wechat-mcp --env WECHAT_MCP_AI_PROVIDER=ollama WECHAT_MCP_AI_MODEL=qwen2.5:14b -- uv --directory {path/to/wechat-mcp} run wechat-mcp --transport stdio
+claude mcp add --transport stdio wechat-mcp -- uv --directory {path/to/wechat-mcp} run wechat-mcp --transport stdio
 ```
 
 </details>
@@ -77,53 +77,18 @@ The server is implemented in `src/wechat_mcp/mcp_server.py` and defines two `@mc
   }
   ```
 
-- `reply_to_messages_by_contact(contact_name: str, instructions: str | None = None, last_n: int = 50) -> dict`
-  Opens the chat, fetches recent messages as above, calls a configured LLM to generate a reply, and sends the reply using the Accessibility-based `send_message` helper. Returns:
+- `reply_to_messages_by_contact(contact_name: str, reply_message: str | null = null, last_n: int = 50) -> dict`
+  Ensures the chat for `contact_name` is open (skipping an extra click when the current chat already matches), and (optionally) sends the provided `reply_message` using the Accessibility-based `send_message` helper. This tool is intended to be driven by the LLM that is already using this MCP: first call `fetch_messages_by_contact`, then compose a reply, then call this tool with that reply. Returns:
 
   ```json
   {
     "contact_name": "The contact",
-    "generated_reply": "The message that was sent",
-    "message_count": 42
+    "reply_message": "The message that was sent (or null)",
+    "sent": true
   }
   ```
 
 If an error occurs, the tools return an object containing an `"error"` field describing the issue.
-
-## AI provider configuration
-
-Reply generation uses an OpenAI-compatible chat completion API. Configuration is controlled via environment variables:
-
-### Provider selection
-
-- `WECHAT_MCP_AI_PROVIDER` – must be either:
-  - `openai`
-  - `ollama`
-
-If not set, it defaults to `openai`.
-
-### OpenAI provider
-
-Required:
-
-- `WECHAT_MCP_AI_API_KEY` – API key for the OpenAI-compatible provider
-- `WECHAT_MCP_AI_MODEL` – model name (e.g. `gpt-4.1-mini`)
-
-Optional:
-
-- `WECHAT_MCP_AI_BASE_URL` – overrides the default `https://api.openai.com/v1`
-
-### Ollama provider
-
-Required:
-
-- `WECHAT_MCP_AI_MODEL` – model name (e.g. `llama3.1:8b-instruct`)
-
-Optional:
-
-- `WECHAT_MCP_AI_BASE_URL` – overrides the default `http://localhost:11434/v1`
-
-For Ollama, no real API key is required; a placeholder key is used if `WECHAT_MCP_AI_API_KEY` is not set.
 
 ## Logging
 
