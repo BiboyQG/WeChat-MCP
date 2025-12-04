@@ -30,10 +30,14 @@ from ApplicationServices import (
 from PIL import ImageGrab
 from Quartz import (
     CGEventCreateKeyboardEvent,
+    CGEventCreateScrollWheelEvent,
     CGEventPost,
     CGEventSetFlags,
+    CGEventSetLocation,
+    CGPoint,
     kCGEventFlagMaskCommand,
     kCGHIDEventTap,
+    kCGScrollEventUnitLine,
 )
 
 from .logging_config import logger
@@ -248,6 +252,84 @@ def capture_message_area(msg_list):
     return image, origin, size
 
 
+def get_list_center(msg_list):
+    """
+    Compute the on-screen center point of the messages list, used as
+    the target for scroll-wheel events.
+    """
+    pos_ref = ax_get(msg_list, kAXPositionAttribute)
+    size_ref = ax_get(msg_list, kAXSizeAttribute)
+    origin = axvalue_to_point(pos_ref)
+    size = axvalue_to_size(size_ref)
+    if origin is None or size is None:
+        raise RuntimeError("Failed to get bounds for WeChat messages list")
+
+    x, y = origin
+    w, h = size
+    return x + w / 2.0, y + h / 2.0
+
+
+def post_scroll(center, delta_lines: int) -> None:
+    """
+    Post a scroll-wheel event at the given screen position.
+
+    Positive delta_lines scrolls towards newer messages (bottom of history),
+    negative towards older messages (top of history).
+    """
+    cx, cy = center
+    event = CGEventCreateScrollWheelEvent(
+        None, kCGScrollEventUnitLine, 1, delta_lines
+    )
+    CGEventSetLocation(event, CGPoint(cx, cy))
+    CGEventPost(kCGHIDEventTap, event)
+
+
+def scroll_to_bottom(msg_list, center) -> None:
+    """
+    Scroll the messages list to the bottom (newest messages) by repeatedly
+    sending large positive scroll events until the last visible message
+    stabilizes.
+    """
+    last_text = None
+    stable = 0
+
+    for _ in range(40):
+        # Positive delta moves towards newer messages (bottom of history).
+        post_scroll(center, 1000)
+        time.sleep(0.05)
+
+        children = ax_get(msg_list, kAXChildrenAttribute) or []
+        texts: list[str] = []
+        for child in children:
+            txt = ax_get(child, kAXValueAttribute) or ax_get(
+                child, kAXTitleAttribute
+            )
+            if txt:
+                texts.append(txt)
+        if not texts:
+            continue
+
+        new_last = texts[-1]
+        if new_last == last_text:
+            stable += 1
+            if stable >= 3:
+                break
+        else:
+            last_text = new_last
+            stable = 0
+
+    time.sleep(0.2)
+
+
+def scroll_up_small(center) -> None:
+    """
+    Scroll slightly upwards to reveal older messages.
+    """
+    # Negative delta scrolls towards older messages.
+    post_scroll(center, -50)
+    time.sleep(0.1)
+
+
 def count_colored_pixels(image, left, top, right, bottom):
     left = max(0, int(left))
     top = max(0, int(top))
@@ -331,39 +413,97 @@ class ChatMessage:
         return asdict(self)
 
 
-def fetch_recent_messages(last_n: int = 100) -> list[ChatMessage]:
+def fetch_recent_messages(
+    last_n: int = 100, max_scrolls: int = 80
+) -> list[ChatMessage]:
     """
-    Fetch recent messages from the currently open chat, classifying
-    each message as ME, OTHER, or UNKNOWN using a screenshot-based
-    heuristic similar to simple_sender_detection.py.
+    Fetch the true last N messages from the currently open chat, even
+    when the history spans multiple screens.
+
+    Uses a scrolling strategy similar to the updated simple_sender_detection.py:
+    - Scrolls to the bottom of the chat history.
+    - Repeatedly scrolls upwards in small steps.
+    - At each position, captures a screenshot of the message area and
+      collects all visible messages plus their positions/sizes.
+    - Classifies each message as ME/OTHER/UNKNOWN using the same
+      screenshot-based heuristic as before.
+    - Merges newly revealed older messages at the front of the list by
+      aligning on the oldest already-known message text.
     """
     ax_app = get_wechat_ax_app()
     msg_list = get_messages_list(ax_app)
-
-    image, list_origin, _ = capture_message_area(msg_list)
-
-    children = ax_get(msg_list, kAXChildrenAttribute) or []
-    start = max(0, len(children) - last_n)
+    center = get_list_center(msg_list)
+    scroll_to_bottom(msg_list, center)
 
     messages: list[ChatMessage] = []
+    no_new_counter = 0
 
-    for child in children[start:]:
-        text = ax_get(child, kAXValueAttribute) or ax_get(child, kAXTitleAttribute)
-        if not text:
-            continue
+    for _ in range(max_scrolls):
+        image, list_origin, _ = capture_message_area(msg_list)
 
-        pos_ref = ax_get(child, kAXPositionAttribute)
-        size_ref = ax_get(child, kAXSizeAttribute)
-        point = axvalue_to_point(pos_ref)
-        size = axvalue_to_size(size_ref)
-        if point is None or size is None:
-            sender: SenderLabel = "UNKNOWN"
+        children = ax_get(msg_list, kAXChildrenAttribute) or []
+        visible: list[ChatMessage] = []
+
+        for child in children:
+            text = ax_get(child, kAXValueAttribute) or ax_get(
+                child, kAXTitleAttribute
+            )
+            if not text:
+                continue
+
+            pos_ref = ax_get(child, kAXPositionAttribute)
+            size_ref = ax_get(child, kAXSizeAttribute)
+            point = axvalue_to_point(pos_ref)
+            size = axvalue_to_size(size_ref)
+            if point is None or size is None:
+                sender: SenderLabel = "UNKNOWN"
+            else:
+                sender = classify_sender_for_message(
+                    image, list_origin, point, size
+                )
+
+            visible.append(ChatMessage(sender=sender, text=str(text)))
+
+        if not visible:
+            break
+
+        if not messages:
+            messages = visible
         else:
-            sender = classify_sender_for_message(image, list_origin, point, size)
+            # Align on the oldest already-known message using its text as anchor.
+            anchor_text = messages[0].text
+            idx = None
+            for i, msg in enumerate(visible):
+                if msg.text == anchor_text:
+                    idx = i
+                    break
 
-        messages.append(ChatMessage(sender=sender, text=str(text)))
+            if idx is None:
+                new_older = visible
+            else:
+                new_older = visible[:idx]
 
-    logger.info("Fetched %d messages from current chat", len(messages))
+            if new_older:
+                messages = new_older + messages
+                no_new_counter = 0
+            else:
+                no_new_counter += 1
+                if no_new_counter >= 5:
+                    break
+
+        if len(messages) >= last_n:
+            break
+
+        scroll_up_small(center)
+
+    if len(messages) > last_n:
+        messages = messages[-last_n:]
+
+    logger.info(
+        "Fetched %d messages from current chat (requested last_n=%d)",
+        len(messages),
+        last_n,
+    )
     return messages
 
 
