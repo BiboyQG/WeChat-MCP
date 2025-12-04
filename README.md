@@ -5,8 +5,6 @@ This project provides an MCP server that automates WeChat on macOS using the Acc
 - Fetch recent messages for a specific contact
 - Generate and send a reply to a contact based on recent history
 
-The project also includes example helper scripts (`list_chats.py`, `simple_sender_detection.py`, `search_contacts.py`, `send_message.py`) that the MCP server logic is based on.
-
 ## Environment setup (using `uv`)
 
 This project uses [`uv`](https://github.com/astral-sh/uv) for dependency and environment management.
@@ -20,7 +18,7 @@ This project uses [`uv`](https://github.com/astral-sh/uv) for dependency and env
 2. From the project root, create/sync the environment:
 
    ```bash
-   cd /Users/biboy/projects/test
+   cd WeChat-MCP
    uv sync
    ```
 
@@ -39,7 +37,7 @@ This project uses [`uv`](https://github.com/astral-sh/uv) for dependency and env
 <details>
   <summary>Claude Code</summary>
 ```bash
-claude mcp add --transport stdio wechat-mcp --env WECHAT_MCP_AI_PROVIDER=ollama WECHAT_MCP_AI_MODEL=qwen2.5:14b -- uv --directory /Users/biboy/projects/test run wechat-mcp --transport stdio
+claude mcp add --transport stdio wechat-mcp --env WECHAT_MCP_AI_PROVIDER=ollama WECHAT_MCP_AI_MODEL=qwen2.5:14b -- uv --directory {path/to/wechat-mcp} run wechat-mcp --transport stdio
 ```
 </details>
 
