@@ -1,44 +1,36 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+## Project Structure & Modules
+- Core code lives in `src/wechat_mcp` (MCP server, accessibility helpers, logging).
+- Entry point is `wechat_mcp.mcp_server:main`, exposed as the `wechat-mcp` script.
+- Logs are written under `logs/` by default (configurable via `WECHAT_MCP_LOG_DIR`).
+- Keep macOS Accessibility and WeChat-specific logic in `wechat_accessibility.py`.
 
-- `src/wechat_mcp/`: core MCP server (`mcp_server.py`), logging, and macOS Accessibility helpers.
-- Root scripts (`list_chats.py`, `search_contacts.py`, `send_message.py`, `simple_sender_detection.py`): small CLIs that should delegate to functions in `wechat_mcp`.
-- `logs/`: rotating runtime logs (typically `logs/wechat_mcp.log`); useful for debugging but not for long-term storage.
-- Future tests should live under `tests/` mirroring package paths, e.g. `tests/wechat_mcp/test_mcp_server.py`.
+## Build, Run & Development
+- Install dependencies: `uv sync` from the repository root.
+- Run the MCP server (stdio): `uv run wechat-mcp --transport stdio`.
+- Run over HTTP/SSE: `uv run wechat-mcp --transport streamable-http --port 3001` or `--transport sse`.
+- Enable protocol debugging: `uv run wechat-mcp --mcp-debug --transport stdio`.
 
-## Build, Test, and Development Commands
-
-- Create/sync environment: `uv sync` (from the repository root).
-- Run MCP server: `uv run wechat-mcp --transport stdio` (add `--mcp-debug` while developing).
-- Run helper scripts, e.g.: `uv run python list_chats.py`.
-- Run tests (once added): `uv run pytest`.
-- Prefer `uv run ...` over manually activating the virtual environment.
-
-## Coding Style & Naming Conventions
-
-- Python 3.12+, PEP 8 style, 4-space indentation.
-- Package/modules: `snake_case` (e.g. `wechat_accessibility.py`).
-- Functions/variables: `snake_case`; classes: `CamelCase`; constants: `UPPER_SNAKE_CASE`.
-- Use type hints and concise docstrings for public functions, especially under `src/wechat_mcp/`.
-- Keep business logic inside `src/wechat_mcp`; root scripts should remain thin wrappers.
+## Coding Style & Naming
+- Python 3.12+, PEP 8 style, 4-space indentation, type hints where practical.
+- Use `snake_case` for functions/variables, `PascalCase` for classes, and relative imports within `wechat_mcp`.
+- Prefer structured logging via `logging_config.logger`; avoid `print` for runtime behavior.
+- Keep functions small, with clear docstrings explaining interaction with macOS Accessibility APIs.
 
 ## Testing Guidelines
-
-- Tests are currently minimal; add new tests under `tests/` using `pytest`.
-- Name test files `test_*.py` and mirror the target module path.
-- Prefer fast, isolated tests; mock external APIs and macOS-specific integrations.
-- Document new test helpers so they can be reused across modules.
+- No formal automated test suite yet; new tests should use `pytest` under `tests/` mirroring `src/wechat_mcp`.
+- Name test files `test_*.py` and test functions `test_*`.
+- Run tests with `uv run pytest`.
+- Avoid hitting real Accessibility APIs in unit tests; isolate them behind helper functions and use fakes where possible.
 
 ## Commit & Pull Request Guidelines
+- Follow Conventional Commit style seen in history (e.g., `feat:`, `docs:`, `refactor(scope):`).
+- Keep commits focused and descriptive; explain behavior changes, not just code moves.
+- PRs should include: summary, motivation, how to reproduce/verify, and any macOS/WeChat version specifics.
+- Attach relevant log snippets from `logs/wechat_mcp.log` when debugging Accessibility issues.
 
-- Follow a Conventional Commits style: `type(scope): summary`, e.g. `docs(README.md): clarify uv usage` or `feat(wechat_accessibility): improve sender detection`.
-- Keep commits focused, logically grouped, and avoid large reformatting-only changes.
-- PRs should include: a clear summary, motivation, any user-visible changes, and the exact commands you ran (e.g. `uv run pytest`, `uv run wechat-mcp --mcp-debug`).
-
-## Security & Configuration Tips
-
-- Do not commit API keys, tokens, or `.env` files; configure providers via `WECHAT_MCP_*` environment variables.
-- Logs in `logs/` may include chat metadata; avoid sharing them publicly.
-- macOS Accessibility permissions are required for WeChat automation—document any troubleshooting steps you discover in `README.md`.
-
+## Agent-Specific Instructions
+- Keep diffs minimal and localized; avoid large refactors unless explicitly requested.
+- Preserve existing logging, error handling, and transport behavior when extending features.
+- Update `README.md` and this file when adding new tools, transports, or configuration knobs.
