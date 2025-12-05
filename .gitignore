@@ -11,3 +11,6 @@ wheels/
 
 # Logging
 logs/
+
+# node_modules
+node_modules/
