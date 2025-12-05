@@ -1,1 +1,0 @@
-"""WeChat MCP server package."""

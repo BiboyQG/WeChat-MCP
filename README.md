@@ -18,7 +18,17 @@ The landing page is built with:
 - Vite
 - Linear-inspired design
 
-To rebuild:
-1. Switch to the master branch
-2. Make changes to the landing page source
-3. Build and deploy to this branch
+### Update and Deploy
+
+To update the landing page and deploy in a single command:
+
+```bash
+npm run build --prefix landing-page && cp -r landing-page/dist/* . && git add -A && git commit -m "chore: update landing page" && git push
+```
+
+### Manual Steps
+
+1. Make changes to the landing page source in `landing-page/src/`
+2. Build the project: `npm run build --prefix landing-page`
+3. Copy built files: `cp -r landing-page/dist/* .`
+4. Commit and push: `git add -A && git commit -m "chore: update landing page" && git push`
