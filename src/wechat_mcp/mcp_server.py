@@ -7,7 +7,13 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from .logging_config import logger
-from .wechat_accessibility import ChatMessage, fetch_recent_messages, get_current_chat_name, open_chat_for_contact, send_message
+from .wechat_accessibility import (
+    ChatMessage,
+    fetch_recent_messages,
+    get_current_chat_name,
+    open_chat_for_contact,
+    send_message,
+)
 
 
 mcp = FastMCP("WeChat Helper MCP Server")
@@ -31,7 +37,18 @@ def fetch_messages_by_contact(
         logger.info(
             "Tool fetch_messages_by_contact called for contact=%s", contact_name
         )
-        open_chat_for_contact(contact_name)
+        open_result = open_chat_for_contact(contact_name)
+        if isinstance(open_result, dict) and open_result.get("error"):
+            # No exact match; surface candidates instead of forcing a chat.
+            logger.info(
+                "open_chat_for_contact returned candidates for contact=%s; "
+                "skipping message fetch",
+                contact_name,
+            )
+            enriched = dict(open_result)
+            enriched.setdefault("tool", "fetch_messages_by_contact")
+            return [enriched]
+
         messages: list[ChatMessage] = fetch_recent_messages(last_n=last_n)
         result = [msg.to_dict() for msg in messages]
         logger.info("Returning %d messages for contact=%s", len(result), contact_name)
@@ -81,7 +98,22 @@ def reply_to_messages_by_contact(
             same_chat,
         )
         if not same_chat:
-            open_chat_for_contact(contact_name)
+            open_result = open_chat_for_contact(contact_name)
+            if isinstance(open_result, dict) and open_result.get("error"):
+                logger.info(
+                    "open_chat_for_contact returned candidates for contact=%s; "
+                    "skipping reply send",
+                    contact_name,
+                )
+                enriched: dict[str, Any] = {
+                    "error": open_result.get("error"),
+                    "contact_name": contact_name,
+                    "candidates": open_result.get("candidates", {}),
+                    "reply_message": reply_message,
+                    "sent": False,
+                    "tool": "reply_to_messages_by_contact",
+                }
+                return enriched
 
         sent = False
         if reply_message is not None and reply_message.strip():

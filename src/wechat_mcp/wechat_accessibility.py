@@ -16,7 +16,6 @@ from ApplicationServices import (
     kAXIdentifierAttribute,
     kAXListRole,
     kAXPositionAttribute,
-    kAXPressAction,
     kAXRaiseAction,
     kAXRoleAttribute,
     kAXSizeAttribute,
@@ -237,13 +236,32 @@ def press_return():
     CGEventPost(kCGHIDEventTap, event_up)
 
 
-def open_chat_for_contact(contact_name: str) -> None:
+def open_chat_for_contact(contact_name: str) -> dict[str, Any] | None:
     """
     Open a chat for a given contact.
 
     First, search in the left sidebar session list. If found, click it.
-    If not, fall back to typing the name into the global search field
-    and pressing Return to select the top result.
+    If not, type the name into the global search field and inspect the
+    search results:
+    - Prefer an exact match under the "Contacts" section.
+    - Otherwise, prefer an exact match under the "Group Chats" section.
+    - If no exact match is visible, expand "View All" for Contacts and
+      Group Chats (if present) and scroll through results, looking for
+      an exact match while explicitly ignoring the "Chat History", "Official Accounts", and "More" sections.
+
+    If no exact match can be found, this function does **not** fall back
+    to the top search result. Instead, it returns a dict of the form:
+
+    {
+        "error": "<LLM-friendly message>",
+        "contact_name": "<original contact_name>",
+        "candidates": {
+            "contacts": [... up to 15 names ...],
+            "group_chats": [... up to 15 names ...],
+        },
+    }
+
+    Callers can use this to ask the LLM to choose a more specific target.
     """
     logger.info("Opening chat for contact: %s", contact_name)
     ax_app = get_wechat_ax_app()
@@ -258,8 +276,314 @@ def open_chat_for_contact(contact_name: str) -> None:
     logger.info("Chat not in session list, using global search")
     focus_and_type_search(ax_app, contact_name)
     time.sleep(0.4)
-    press_return()
-    time.sleep(0.4)
+
+    try:
+        found, candidates = _select_contact_from_search_results(
+            ax_app, contact_name
+        )
+        if found:
+            logger.info(
+                "Opened chat for %s via search results", contact_name
+            )
+            time.sleep(0.4)
+            return None
+
+        logger.info(
+            "Exact match for %s not found in Contacts/Group Chats search "
+            "results; returning candidate names",
+            contact_name,
+        )
+        error_msg = (
+            "Could not find an exact match for the requested contact name in "
+            "WeChat's Contacts or Group Chats search results. Returning "
+            "related contact and group names so the LLM can choose a more "
+            "specific chat to open."
+        )
+        logger.warning(
+            "open_chat_for_contact(%s) returning candidates instead of "
+            "opening a chat: %s",
+            contact_name,
+            error_msg,
+        )
+        return {
+            "error": error_msg,
+            "contact_name": contact_name,
+            "candidates": candidates,
+        }
+    except Exception as exc:
+        logger.exception(
+            "Error while selecting contact %s from search results: %s",
+            contact_name,
+            exc,
+        )
+        raise
+
+
+def get_search_list(ax_app):
+    """
+    Return the AX list that contains global search results in the
+    left sidebar (identifier: 'search_list').
+    """
+
+    def is_search_list(el, role, title, identifier):
+        return role == kAXListRole and identifier == "search_list"
+
+    search_list = dfs(ax_app, is_search_list)
+    if search_list is None:
+        raise RuntimeError(
+            "Could not find WeChat search results list via Accessibility API"
+        )
+    return search_list
+
+
+@dataclass
+class SearchEntry:
+    element: Any
+    text: str
+    y: float
+
+
+def _collect_search_entries(search_list) -> list[SearchEntry]:
+    """
+    Collect visible static-text entries from the search results list,
+    including section headers, result cards and "View All"/"Collapse"
+    rows. Entries are sorted by vertical (Y) position.
+    """
+    entries: list[SearchEntry] = []
+
+    def walk(el):
+        role = ax_get(el, kAXRoleAttribute)
+        if role == kAXStaticTextRole:
+            title = ax_get(el, kAXTitleAttribute)
+            value = ax_get(el, kAXValueAttribute)
+            text_obj = title if isinstance(title, str) and title else value
+            if isinstance(text_obj, str):
+                pos_ref = ax_get(el, kAXPositionAttribute)
+                point = axvalue_to_point(pos_ref)
+                y = point[1] if point is not None else 0.0
+                entries.append(
+                    SearchEntry(
+                        element=el,
+                        text=text_obj.strip(),
+                        y=float(y),
+                    )
+                )
+
+        children = ax_get(el, kAXChildrenAttribute) or []
+        for child in children:
+            walk(child)
+
+    walk(search_list)
+    entries.sort(key=lambda e: e.y)
+    return entries
+
+
+def _build_section_headers(entries: list[SearchEntry]) -> dict[str, float]:
+    """
+    Map known section titles ("Contacts", "Group Chats", "Chat History", "Official Accounts", "More")
+    to their vertical Y coordinate within the search list.
+    """
+    headers: dict[str, float] = {}
+    for entry in entries:
+        if entry.text in ("Contacts", "Group Chats", "Chat History", "Official Accounts", "More"):
+            headers[entry.text] = entry.y
+    return headers
+
+
+def _classify_section(
+    entry: SearchEntry, headers: dict[str, float]
+) -> str | None:
+    """
+    Given an entry and the Y positions of section headers, determine which
+    section this entry belongs to by picking the last header above it.
+    """
+    section: str | None = None
+    best_y = float("-inf")
+    for title, header_y in headers.items():
+        if header_y <= entry.y and header_y > best_y:
+            section = title
+            best_y = header_y
+    return section
+
+
+def _find_exact_match_in_entries(
+    entries: list[SearchEntry], contact_name: str
+):
+    """
+    Look for an exact match in the current snapshot of search results.
+
+    Preference order:
+    - Exact match under "Contacts"
+    - Exact match under "Group Chats"
+
+    Entries classified as "Chat History", "Official Accounts", or "More" are ignored.
+    """
+    target = contact_name.strip()
+    headers = _build_section_headers(entries)
+
+    contact_element = None
+    group_element = None
+
+    for entry in entries:
+        if entry.text != target:
+            continue
+        section = _classify_section(entry, headers)
+        if section == "Contacts" and contact_element is None:
+            contact_element = entry.element
+        elif section == "Group Chats" and group_element is None:
+            group_element = entry.element
+
+    if contact_element is not None:
+        return contact_element
+    if group_element is not None:
+        return group_element
+    return None
+
+
+def _summarize_search_candidates(
+    entries: list[SearchEntry],
+) -> dict[str, list[str]]:
+    """
+    Summarize candidate names from search entries, grouped by section.
+
+    Returns up to 15 unique names from each of:
+    - "Contacts"
+    - "Group Chats"
+
+    Entries belonging to "Chat History", "Official Accounts", or "More" are ignored.
+    """
+    headers = _build_section_headers(entries)
+    contacts: list[str] = []
+    group_chats: list[str] = []
+
+    for entry in entries:
+        # Skip section headers themselves.
+        if entry.text in ("Contacts", "Group Chats", "Chat History", "Official Accounts", "More"):
+            continue
+
+        section = _classify_section(entry, headers)
+        if section == "Contacts":
+            if entry.text not in contacts:
+                contacts.append(entry.text)
+        elif section == "Group Chats":
+            if entry.text not in group_chats:
+                group_chats.append(entry.text)
+
+    return {
+        "contacts": contacts[:15],
+        "group_chats": group_chats[:15],
+    }
+
+
+def _expand_section_if_needed(search_list, section_title: str) -> None:
+    """
+    If a "View All(...)" row exists for the given section title
+    ("Contacts" or "Group Chats"), click its center to expand that section.
+    """
+    entries = _collect_search_entries(search_list)
+    headers = _build_section_headers(entries)
+    if section_title not in headers:
+        return
+
+    for entry in entries:
+        if not entry.text.startswith("View All"):
+            continue
+        section = _classify_section(entry, headers)
+        if section == section_title:
+            logger.info("Expanding %s section via %r", section_title, entry.text)
+            click_element_center(entry.element)
+            time.sleep(0.3)
+            return
+
+
+def _select_contact_from_search_results(
+    ax_app, contact_name: str
+) -> tuple[bool, dict[str, list[str]]]:
+    """
+    Try to open a chat by selecting an exact match from the global
+    search results list, preferring Contacts over Group Chats and
+    ignoring the Chat History, Official Accounts, and More sections.
+    """
+    search_list = get_search_list(ax_app)
+
+    aggregated_contacts: set[str] = set()
+    aggregated_groups: set[str] = set()
+
+    def update_candidates(entries: list[SearchEntry]) -> None:
+        partial = _summarize_search_candidates(entries)
+        aggregated_contacts.update(partial["contacts"])
+        aggregated_groups.update(partial["group_chats"])
+
+    # First, inspect the initial compact search popover without scrolling.
+    entries = _collect_search_entries(search_list)
+    update_candidates(entries)
+    element = _find_exact_match_in_entries(entries, contact_name)
+    if element is not None:
+        logger.info(
+            "Found exact match for %s in initial search results", contact_name
+        )
+        click_element_center(element)
+        return True, {
+            "contacts": list(aggregated_contacts)[:15],
+            "group_chats": list(aggregated_groups)[:15],
+        }
+
+    # No exact match visible yet; expand Contacts and Group Chats if possible.
+    _expand_section_if_needed(search_list, "Contacts")
+    _expand_section_if_needed(search_list, "Group Chats")
+
+    center = get_list_center(search_list)
+    last_bottom_text = None
+    stable = 0
+
+    # Scroll through the expanded search list, looking for an
+    # exact match under Contacts/Group Chats, while aggregating
+    # candidate names from Contacts and Group Chats.
+    for _ in range(80):
+        entries = _collect_search_entries(search_list)
+        update_candidates(entries)
+
+        element = _find_exact_match_in_entries(entries, contact_name)
+        if element is not None:
+            logger.info(
+                "Found exact match for %s while scrolling search results",
+                contact_name,
+            )
+            click_element_center(element)
+            return True, {
+                "contacts": list(aggregated_contacts)[:15],
+                "group_chats": list(aggregated_groups)[:15],
+            }
+
+        children = ax_get(search_list, kAXChildrenAttribute) or []
+        texts: list[str] = []
+        for child in children:
+            txt = ax_get(child, kAXValueAttribute) or ax_get(
+                child, kAXTitleAttribute
+            )
+            if isinstance(txt, str) and txt.strip():
+                texts.append(txt)
+
+        if not texts:
+            break
+
+        new_last = texts[-1]
+        if new_last == last_bottom_text:
+            stable += 1
+            if stable >= 3:
+                break
+        else:
+            last_bottom_text = new_last
+            stable = 0
+
+        # Positive delta scrolls downwards through the search results list.
+        post_scroll(center, 80)
+        time.sleep(0.1)
+
+    return False, {
+        "contacts": list(aggregated_contacts)[:15],
+        "group_chats": list(aggregated_groups)[:15],
+    }
 
 
 def get_messages_list(ax_app):
@@ -474,7 +798,7 @@ def fetch_recent_messages(
     Fetch the true last N messages from the currently open chat, even
     when the history spans multiple screens.
 
-    Uses a scrolling strategy similar to the updated simple_sender_detection.py:
+    Uses a scrolling strategy that involves:
     - Scrolls to the bottom of the chat history.
     - Repeatedly scrolls upwards in small steps.
     - At each position, captures a screenshot of the message area and
