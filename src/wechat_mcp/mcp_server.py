@@ -20,63 +20,72 @@ mcp = FastMCP("WeChat Helper MCP Server")
 
 
 @mcp.tool()
-def fetch_messages_by_contact(
-    contact_name: str,
+def fetch_messages_by_chat(
+    chat_name: str,
     last_n: int = 50,
 ) -> list[dict[str, Any]]:
     """
-    Fetch recent messages for a specific contact.
+    Fetch recent messages for a specific chat (contact or group).
 
     This will:
-    - Look for the contact in the left sidebar session list
-    - If found, click the contact to open the chat
-    - If not found, search for the contact via the search box
+    - Look for the chat in the left sidebar session list
+    - If found, click it to open the chat
+    - If not found, search for the chat via the search box
     - Once the chat is open, retrieve recent messages from that chat
     """
     try:
         logger.info(
-            "Tool fetch_messages_by_contact called for contact=%s", contact_name
+            "Tool fetch_messages_by_chat called for chat=%s", chat_name
         )
-        open_result = open_chat_for_contact(contact_name)
-        if isinstance(open_result, dict) and open_result.get("error"):
-            # No exact match; surface candidates instead of forcing a chat.
-            logger.info(
-                "open_chat_for_contact returned candidates for contact=%s; "
-                "skipping message fetch",
-                contact_name,
-            )
-            enriched = dict(open_result)
-            enriched.setdefault("tool", "fetch_messages_by_contact")
-            return [enriched]
+        current_chat = get_current_chat_name()
+        same_chat = current_chat == chat_name if current_chat is not None else False
+        logger.info(
+            "Current chat title=%r, target=%r, same_chat=%s",
+            current_chat,
+            chat_name,
+            same_chat,
+        )
+        if not same_chat:
+            open_result = open_chat_for_contact(chat_name)
+            if isinstance(open_result, dict) and open_result.get("error"):
+                # No exact match; surface candidates instead of forcing a chat.
+                logger.info(
+                    "open_chat_for_contact returned candidates for chat=%s; "
+                    "skipping message fetch",
+                    chat_name,
+                )
+                enriched = dict(open_result)
+                enriched.setdefault("tool", "fetch_messages_by_chat")
+                return [enriched]
 
         messages: list[ChatMessage] = fetch_recent_messages(last_n=last_n)
         result = [msg.to_dict() for msg in messages]
-        logger.info("Returning %d messages for contact=%s", len(result), contact_name)
+        logger.info("Returning %d messages for chat=%s", len(result), chat_name)
         return result
     except Exception as exc:
         logger.exception(
-            "Error in fetch_messages_by_contact for contact=%s: %s",
-            contact_name,
+            "Error in fetch_messages_by_chat for chat=%s: %s",
+            chat_name,
             exc,
         )
         return [
             {
                 "error": str(exc),
-                "contact_name": contact_name,
+                "chat_name": chat_name,
             }
         ]
 
 
 @mcp.tool()
-def reply_to_messages_by_contact(
-    contact_name: str,
+def reply_to_messages_by_chat(
+    chat_name: str,
     reply_message: str | None = None,
 ) -> dict[str, Any]:
     """
-    Optionally send a reply to a contact.
+    Optionally send a reply to a chat (contact or group).
 
     This tool is designed to be driven by the LLM using this MCP:
-    - Call fetch_messages_by_contact first to inspect conversation history.
+    - Call fetch_messages_by_chat first to inspect conversation history.
     - Have the LLM compose a reply string.
     - Call this tool with that reply string to send it.
 
@@ -84,34 +93,34 @@ def reply_to_messages_by_contact(
     ensures the chat is open.
     """
     logger.info(
-        "Tool reply_to_messages_by_contact called for contact=%s (has_reply=%s)",
-        contact_name,
+        "Tool reply_to_messages_by_chat called for chat=%s (has_reply=%s)",
+        chat_name,
         bool(reply_message),
     )
     try:
         current_chat = get_current_chat_name()
-        same_chat = current_chat == contact_name if current_chat is not None else False
+        same_chat = current_chat == chat_name if current_chat is not None else False
         logger.info(
             "Current chat title=%r, target=%r, same_chat=%s",
             current_chat,
-            contact_name,
+            chat_name,
             same_chat,
         )
         if not same_chat:
-            open_result = open_chat_for_contact(contact_name)
+            open_result = open_chat_for_contact(chat_name)
             if isinstance(open_result, dict) and open_result.get("error"):
                 logger.info(
-                    "open_chat_for_contact returned candidates for contact=%s; "
+                    "open_chat_for_contact returned candidates for chat=%s; "
                     "skipping reply send",
-                    contact_name,
+                    chat_name,
                 )
                 enriched: dict[str, Any] = {
                     "error": open_result.get("error"),
-                    "contact_name": contact_name,
+                    "chat_name": chat_name,
                     "candidates": open_result.get("candidates", {}),
                     "reply_message": reply_message,
                     "sent": False,
-                    "tool": "reply_to_messages_by_contact",
+                    "tool": "reply_to_messages_by_chat",
                 }
                 return enriched
 
@@ -120,25 +129,25 @@ def reply_to_messages_by_contact(
             send_message(reply_message)
             sent = True
             logger.info(
-                "Reply sent to contact=%s; message length=%d",
-                contact_name,
+                "Reply sent to chat=%s; message length=%d",
+                chat_name,
                 len(reply_message),
             )
 
         return {
-            "contact_name": contact_name,
+            "chat_name": chat_name,
             "reply_message": reply_message,
             "sent": sent,
         }
     except Exception as exc:
         logger.exception(
-            "Error in reply_to_messages_by_contact for contact=%s: %s",
-            contact_name,
+            "Error in reply_to_messages_by_chat for chat=%s: %s",
+            chat_name,
             exc,
         )
         return {
             "error": str(exc),
-            "contact_name": contact_name,
+            "chat_name": chat_name,
         }
 
 

@@ -140,17 +140,17 @@ def collect_chat_elements(ax_app) -> dict[str, Any]:
     return results
 
 
-def find_chat_element_by_name(ax_app, contact_name: str):
+def find_chat_element_by_name(ax_app, chat_name: str):
     """
-    Find a chat element whose name matches the given contact name exactly
+    Find a chat element whose name matches the given chat name exactly
     (case-sensitive and case-insensitive match are both attempted).
     """
     chat_elements = collect_chat_elements(ax_app)
-    if contact_name in chat_elements:
-        return chat_elements[contact_name]
+    if chat_name in chat_elements:
+        return chat_elements[chat_name]
 
     lowered = {name.lower(): el for name, el in chat_elements.items()}
-    match = lowered.get(contact_name.lower())
+    match = lowered.get(chat_name.lower())
     if match is not None:
         return match
     return None
@@ -236,9 +236,9 @@ def press_return():
     CGEventPost(kCGHIDEventTap, event_up)
 
 
-def open_chat_for_contact(contact_name: str) -> dict[str, Any] | None:
+def open_chat_for_contact(chat_name: str) -> dict[str, Any] | None:
     """
-    Open a chat for a given contact.
+    Open a chat for a given name (contact or group).
 
     First, search in the left sidebar session list. If found, click it.
     If not, type the name into the global search field and inspect the
@@ -254,7 +254,7 @@ def open_chat_for_contact(contact_name: str) -> dict[str, Any] | None:
 
     {
         "error": "<LLM-friendly message>",
-        "contact_name": "<original contact_name>",
+        "chat_name": "<original chat_name>",
         "candidates": {
             "contacts": [... up to 15 names ...],
             "group_chats": [... up to 15 names ...],
@@ -263,10 +263,10 @@ def open_chat_for_contact(contact_name: str) -> dict[str, Any] | None:
 
     Callers can use this to ask the LLM to choose a more specific target.
     """
-    logger.info("Opening chat for contact: %s", contact_name)
+    logger.info("Opening chat for name: %s", chat_name)
     ax_app = get_wechat_ax_app()
 
-    element = find_chat_element_by_name(ax_app, contact_name)
+    element = find_chat_element_by_name(ax_app, chat_name)
     if element is not None:
         logger.info("Found chat in session list, clicking center")
         click_element_center(element)
@@ -274,16 +274,16 @@ def open_chat_for_contact(contact_name: str) -> dict[str, Any] | None:
         return
 
     logger.info("Chat not in session list, using global search")
-    focus_and_type_search(ax_app, contact_name)
+    focus_and_type_search(ax_app, chat_name)
     time.sleep(0.4)
 
     try:
         found, candidates = _select_contact_from_search_results(
-            ax_app, contact_name
+            ax_app, chat_name
         )
         if found:
             logger.info(
-                "Opened chat for %s via search results", contact_name
+                "Opened chat for %s via search results", chat_name
             )
             time.sleep(0.4)
             return None
@@ -291,10 +291,10 @@ def open_chat_for_contact(contact_name: str) -> dict[str, Any] | None:
         logger.info(
             "Exact match for %s not found in Contacts/Group Chats search "
             "results; returning candidate names",
-            contact_name,
+            chat_name,
         )
         error_msg = (
-            "Could not find an exact match for the requested contact name in "
+            "Could not find an exact match for the requested chat name in "
             "WeChat's Contacts or Group Chats search results. Returning "
             "related contact and group names so the LLM can choose a more "
             "specific chat to open."
@@ -302,18 +302,18 @@ def open_chat_for_contact(contact_name: str) -> dict[str, Any] | None:
         logger.warning(
             "open_chat_for_contact(%s) returning candidates instead of "
             "opening a chat: %s",
-            contact_name,
+            chat_name,
             error_msg,
         )
         return {
             "error": error_msg,
-            "contact_name": contact_name,
+            "chat_name": chat_name,
             "candidates": candidates,
         }
     except Exception as exc:
         logger.exception(
-            "Error while selecting contact %s from search results: %s",
-            contact_name,
+            "Error while selecting chat %s from search results: %s",
+            chat_name,
             exc,
         )
         raise
