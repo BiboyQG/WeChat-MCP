@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import re
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any, Callable, Literal
 
 import AppKit
@@ -91,6 +92,20 @@ def get_wechat_ax_app() -> Any:
     return AXUIElementCreateApplication(app.processIdentifier())
 
 
+def _normalize_chat_title(name: str) -> str:
+    """
+    Normalize a WeChat chat title.
+
+    In particular, strip a trailing "(<digits>)" suffix that WeChat
+    appends for group chats to indicate member count, e.g.:
+    "My Group(23)" -> "My Group".
+    """
+    name = name.strip()
+    # Remove trailing "(number)" if present.
+    name = re.sub(r"\(\d+\)$", "", name).strip()
+    return name
+
+
 def get_current_chat_name() -> str | None:
     """
     Return the display name of the currently open chat, if available.
@@ -107,11 +122,11 @@ def get_current_chat_name() -> str | None:
 
     value = ax_get(title_el, kAXValueAttribute)
     if isinstance(value, str) and value.strip():
-        return value.strip()
+        return _normalize_chat_title(value)
 
     title = ax_get(title_el, kAXTitleAttribute)
     if isinstance(title, str) and title.strip():
-        return title.strip()
+        return _normalize_chat_title(title)
 
     return None
 
