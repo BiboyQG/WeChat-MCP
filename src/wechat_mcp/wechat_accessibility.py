@@ -808,7 +808,7 @@ class ChatMessage:
 
 
 def fetch_recent_messages(
-    last_n: int = 100, max_scrolls: int = 80
+    last_n: int = 100, max_scrolls: int | None = None
 ) -> list[ChatMessage]:
     """
     Fetch the true last N messages from the currently open chat, even
@@ -830,9 +830,10 @@ def fetch_recent_messages(
     scroll_to_bottom(msg_list, center)
 
     messages: list[ChatMessage] = []
+    scrolls = 0
     no_new_counter = 0
 
-    for _ in range(max_scrolls):
+    while True:
         image, list_origin, _ = capture_message_area(msg_list)
 
         children = ax_get(msg_list, kAXChildrenAttribute) or []
@@ -889,6 +890,10 @@ def fetch_recent_messages(
             break
 
         scroll_up_small(center)
+
+        scrolls += 1
+        if max_scrolls is not None and scrolls >= max_scrolls:
+            break
 
     if len(messages) > last_n:
         messages = messages[-last_n:]
