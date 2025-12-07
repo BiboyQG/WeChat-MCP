@@ -3,6 +3,7 @@ import './App.css'
 
 type Theme = 'light' | 'dark'
 type Language = 'en' | 'zh'
+type View = 'overview' | 'changelog'
 
 interface Translations {
   hero: {
@@ -35,6 +36,10 @@ interface Translations {
   footer: {
     madeWith: string
   }
+  changelog: {
+    title: string
+    subtitle: string
+  }
 }
 
 const translations: Record<Language, Translations> = {
@@ -42,7 +47,7 @@ const translations: Record<Language, Translations> = {
     hero: {
       title: 'WeChat MCP',
       subtitle: 'Automate WeChat with AI',
-      description: 'Connect your Claude Code and other MCP clients to WeChat. Enable AI-powered messaging automation on macOS with the Model Context Protocol.',
+      description: 'An MCP-compatible server that lets Claude and other AI assistants read and reply to WeChat messages on macOS using Accessibility APIs.',
       getStarted: 'Get Started',
       learnMore: 'View on GitHub'
     },
@@ -93,7 +98,7 @@ const translations: Record<Language, Translations> = {
       steps: [
         {
           title: '1. Install WeChat MCP',
-          description: 'Clone the repository and set up the MCP server using uv. Grant Accessibility permissions to Python in System Settings.'
+          description: 'Install the WeChat MCP server from PyPI with pip install wechat-mcp-server. Then grant Accessibility permissions to Python in System Settings.'
         },
         {
           title: '2. Connect to Claude Code',
@@ -136,6 +141,10 @@ const translations: Record<Language, Translations> = {
     },
     footer: {
       madeWith: 'Built with the Model Context Protocol'
+    },
+    changelog: {
+      title: 'Changelog',
+      subtitle: 'Release notes for the WeChat MCP server.'
     }
   },
   zh: {
@@ -193,7 +202,7 @@ const translations: Record<Language, Translations> = {
       steps: [
         {
           title: '1. 安装 WeChat MCP',
-          description: '克隆仓库并使用 uv 设置 MCP 服务器。在系统设置中授予 Python 辅助功能权限。'
+          description: '通过 pip install wechat-mcp-server 从 PyPI 安装 WeChat MCP 服务器，然后在系统设置中为 Python 授予辅助功能权限。'
         },
         {
           title: '2. 连接到 Claude Code',
@@ -236,6 +245,10 @@ const translations: Record<Language, Translations> = {
     },
     footer: {
       madeWith: '使用模型上下文协议构建'
+    },
+    changelog: {
+      title: '更新日志',
+      subtitle: 'WeChat MCP 服务器的版本更新记录。'
     }
   }
 }
@@ -244,6 +257,7 @@ function App() {
   const [theme, setTheme] = useState<Theme>('dark')
   const [language, setLanguage] = useState<Language>('en')
   const [stars, setStars] = useState<number | null>(null)
+  const [view, setView] = useState<View>('overview')
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -258,6 +272,10 @@ function App() {
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light')
   const toggleLanguage = () => setLanguage(prev => prev === 'en' ? 'zh' : 'en')
+  const changeView = (next: View) => {
+    setView(next)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const t = translations[language]
 
@@ -266,9 +284,28 @@ function App() {
       <header className="header">
         <div className="header-content">
           <div className="logo">
-            <img src="/WeChat-MCP/wechat.png" alt="WeChat" className="logo-image" />
+            <img
+              src="https://cdn-icons-png.flaticon.com/512/3938/3938101.png"
+              alt="WeChat icon"
+              className="logo-image"
+            />
             <span className="logo-text">WeChat MCP</span>
           </div>
+
+          <nav className="nav">
+            <button
+              className={`nav-link ${view === 'overview' ? 'nav-link-active' : ''}`}
+              onClick={() => changeView('overview')}
+            >
+              {language === 'en' ? 'Overview' : '概览'}
+            </button>
+            <button
+              className={`nav-link ${view === 'changelog' ? 'nav-link-active' : ''}`}
+              onClick={() => changeView('changelog')}
+            >
+              {language === 'en' ? 'Changelog' : '更新日志'}
+            </button>
+          </nav>
 
           <div className="header-actions">
             <button className="icon-button" onClick={toggleLanguage} aria-label="Toggle language">
@@ -284,7 +321,7 @@ function App() {
               rel="noopener noreferrer"
             >
               <svg className="github-icon" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
               </svg>
               {stars !== null && <span className="stars-count">{stars}</span>}
             </a>
@@ -294,106 +331,246 @@ function App() {
 
       <main className="main">
         <section className="hero">
-          <div className="container">
-            <h1 className="hero-title">{t.hero.title}</h1>
-            <p className="hero-subtitle">{t.hero.subtitle}</p>
-            <p className="hero-description">{t.hero.description}</p>
-            <div className="hero-actions">
-              <a href="https://github.com/BiboyQG/WeChat-MCP#readme" className="button button-primary" target="_blank" rel="noopener noreferrer">
-                {t.hero.getStarted}
-              </a>
-              <a href="https://github.com/BiboyQG/WeChat-MCP" className="button button-secondary" target="_blank" rel="noopener noreferrer">
-                {t.hero.learnMore}
-              </a>
-            </div>
-          </div>
-        </section>
-
-        <section className="integration">
-          <div className="container">
-            <div className="integration-content">
-              <div className="integration-icon">
-                <img
-                  src="https://xaviercollantes.dev/articles/claude-cheatsheet"
-                  alt="Claude Code"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = '<div class="icon-placeholder">Claude Code</div>';
-                    }
-                  }}
-                />
+          <div className="container hero-grid">
+            <div className="hero-left">
+              <p className="hero-pill">
+                <span className="hero-pill-badge">New</span>
+                <span>
+                  {language === 'en'
+                    ? 'v0.1.0 • Now available on PyPI'
+                    : 'v0.1.0 • 首次发布到 PyPI'}
+                </span>
+              </p>
+              <h1 className="hero-title">{t.hero.title}</h1>
+              <p className="hero-subtitle">{t.hero.subtitle}</p>
+              <p className="hero-description">{t.hero.description}</p>
+              <div className="hero-meta">
+                <span className="hero-tag">Python 3.12+</span>
+                <span className="hero-tag">macOS · Accessibility</span>
+                <span className="hero-tag">Model Context Protocol</span>
               </div>
-              <div className="integration-text">
-                <h2>{t.integration.title}</h2>
-                <p>{t.integration.description}</p>
+              <div className="hero-actions">
+                <a
+                  href="https://github.com/BiboyQG/WeChat-MCP#readme"
+                  className="button button-primary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t.hero.getStarted}
+                </a>
+                <a
+                  href="https://github.com/BiboyQG/WeChat-MCP"
+                  className="button button-secondary"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {t.hero.learnMore}
+                </a>
+              </div>
+            </div>
+            <div className="hero-right">
+              <div className="hero-card">
+                <div className="hero-card-header">
+                  {language === 'en' ? 'Install via pip' : '通过 pip 安装'}
+                </div>
+                <pre className="code-snippet">
+                  <code>pip install wechat-mcp-server</code>
+                </pre>
+                <p className="hero-card-meta">
+                  {language === 'en'
+                    ? 'Installs the wechat-mcp CLI and MCP server on your Mac.'
+                    : '在你的 Mac 上安装 wechat-mcp CLI 和 MCP 服务器。'}
+                </p>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="pain-points">
-          <div className="container">
-            <h2 className="section-title">{t.painPoints.title}</h2>
-            <div className="grid">
-              {t.painPoints.points.map((point, index) => (
-                <div key={index} className="card">
-                  <h3>{point.title}</h3>
-                  <p>{point.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="benefits">
-          <div className="container">
-            <h2 className="section-title">{t.benefits.title}</h2>
-            <div className="grid grid-2x2">
-              {t.benefits.points.map((point, index) => (
-                <div key={index} className="card card-highlight">
-                  <h3>{point.title}</h3>
-                  <p>{point.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="how-it-works">
-          <div className="container">
-            <h2 className="section-title">{t.howItWorks.title}</h2>
-            <div className="steps">
-              {t.howItWorks.steps.map((step, index) => (
-                <div key={index} className="step">
-                  <div className="step-content">
-                    <h3>{step.title}</h3>
-                    <p>{step.description}</p>
+        {view === 'overview' && (
+          <>
+            <section className="integration">
+              <div className="container">
+                <div className="integration-content">
+                  <div className="integration-icon">
+                    <div className="integration-icon-pill">
+                      <span className="integration-icon-pill-label">MCP</span>
+                      <span className="integration-icon-pill-separator">×</span>
+                      <span>WeChat</span>
+                    </div>
                   </div>
-                  {index < t.howItWorks.steps.length - 1 && (
-                    <div className="step-connector"></div>
-                  )}
+                  <div className="integration-text">
+                    <h2>{t.integration.title}</h2>
+                    <p>{t.integration.description}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
+              </div>
+            </section>
 
-        <section className="faqs">
-          <div className="container">
-            <h2 className="section-title">{t.faqs.title}</h2>
-            <div className="faq-list">
-              {t.faqs.items.map((item, index) => (
-                <details key={index} className="faq-item">
-                  <summary>{item.question}</summary>
-                  <p>{item.answer}</p>
-                </details>
-              ))}
+            <section className="pain-points">
+              <div className="container">
+                <h2 className="section-title">{t.painPoints.title}</h2>
+                <div className="grid">
+                  {t.painPoints.points.map((point, index) => (
+                    <div key={index} className="card">
+                      <h3>{point.title}</h3>
+                      <p>{point.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="benefits">
+              <div className="container">
+                <h2 className="section-title">{t.benefits.title}</h2>
+                <div className="grid grid-2x2">
+                  {t.benefits.points.map((point, index) => (
+                    <div key={index} className="card card-highlight">
+                      <h3>{point.title}</h3>
+                      <p>{point.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="how-it-works">
+              <div className="container">
+                <h2 className="section-title">{t.howItWorks.title}</h2>
+                <div className="steps">
+                  {t.howItWorks.steps.map((step, index) => (
+                    <div key={index} className="step">
+                      <div className="step-content">
+                        <h3>{step.title}</h3>
+                        <p>{step.description}</p>
+                      </div>
+                      {index < t.howItWorks.steps.length - 1 && (
+                        <div className="step-connector"></div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="faqs">
+              <div className="container">
+                <h2 className="section-title">{t.faqs.title}</h2>
+                <div className="faq-list">
+                  {t.faqs.items.map((item, index) => (
+                    <details key={index} className="faq-item">
+                      <summary>{item.question}</summary>
+                      <p>{item.answer}</p>
+                    </details>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
+        {view === 'changelog' && (
+          <section className="changelog">
+            <div className="container">
+              <header className="changelog-header">
+                <h2 className="section-title">{t.changelog.title}</h2>
+                <p className="changelog-subtitle">{t.changelog.subtitle}</p>
+              </header>
+
+              <article className="release-card">
+                <header className="release-header">
+                  <div>
+                    <div className="release-version">v0.1.0</div>
+                    <div className="release-label">
+                      {language === 'en'
+                        ? 'Initial public release'
+                        : '首次公开发布'}
+                    </div>
+                  </div>
+                  <div className="release-badges">
+                    <span className="release-pill">PyPI • wechat-mcp-server</span>
+                    <span className="release-pill release-pill-soft">
+                      {language === 'en' ? 'Alpha' : '测试版'}
+                    </span>
+                  </div>
+                </header>
+
+                <p className="release-summary">
+                  {language === 'en'
+                    ? 'Initial public release of the WeChat MCP server, exposing an MCP-compatible interface for reading and replying to WeChat messages on macOS via Accessibility APIs and screen capture.'
+                    : 'WeChat MCP 服务器的首次公开版本，在 macOS 上通过辅助功能 API 和截屏提供读取与回复微信消息的 MCP 接口。'}
+                </p>
+
+                <div className="release-install">
+                  <div className="release-install-label">
+                    {language === 'en' ? 'Install' : '安装'}
+                  </div>
+                  <pre className="code-snippet">
+                    <code>pip install wechat-mcp-server</code>
+                  </pre>
+                </div>
+
+                <div className="release-section">
+                  <h3>Highlights</h3>
+                  <ul>
+                    <li>
+                      MCP server exposing WeChat automation tools over stdio, streamable HTTP, or SSE transports.
+                    </li>
+                    <li>
+                      End-to-end macOS Accessibility integration to locate chats, read message history, and send replies.
+                    </li>
+                    <li>
+                      Screenshot-based sender classification to distinguish messages from you vs. others.
+                    </li>
+                    <li>
+                      Structured logging to both terminal and rotating log files.
+                    </li>
+                    <li>
+                      First official PyPI release of <code>wechat-mcp-server</code>.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="release-section">
+                  <h3>Features</h3>
+                  <ul>
+                    <li>
+                      <strong>MCP server and CLI</strong> via the <code>wechat-mcp</code> console script with stdio, HTTP, and SSE transports.
+                    </li>
+                    <li>
+                      <strong>WeChat tools</strong> for fetching messages by chat and replying to messages, with smart handling of ambiguous chat names.
+                    </li>
+                    <li>
+                      <strong>macOS Accessibility helpers</strong> that drive the WeChat UI, scroll message history, and capture screenshots for sender classification.
+                    </li>
+                    <li>
+                      <strong>Logging and observability</strong> with configurable log directory and verbose debug mode for MCP and HTTP traffic.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="release-section">
+                  <h3>Requirements</h3>
+                  <ul>
+                    <li>macOS with Accessibility and screen capture permissions granted to your terminal / Python.</li>
+                    <li>WeChat installed and running on macOS.</li>
+                    <li>Python 3.12+ with <code>pyobjc</code>, <code>Pillow</code>, and <code>mcp[cli]</code> dependencies.</li>
+                  </ul>
+                </div>
+
+                <div className="release-section">
+                  <h3>Known limitations</h3>
+                  <ul>
+                    <li>Tested only on the standard macOS WeChat client and default Accessibility structure.</li>
+                    <li>Sender classification relies on color heuristics and may misclassify in unusual themes or display conditions.</li>
+                    <li>Focuses on English / Latin chat names; broader localization is planned.</li>
+                    <li>Marked as alpha; APIs and behavior may change in future versions.</li>
+                  </ul>
+                </div>
+              </article>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </main>
 
       <footer className="footer">
