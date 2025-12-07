@@ -910,32 +910,6 @@ def find_input_field(ax_app):
     return input_field
 
 
-def focus_chat_input(ax_app):
-    """
-    Ensure the WeChat chat input field has keyboard focus.
-
-    This raises the input field's window and clicks at its visual center
-    so that subsequent keyboard events (such as Return) are delivered to
-    the chat input rather than the global search field or another
-    window.
-    """
-    input_field = find_input_field(ax_app)
-
-    try:
-        AXUIElementPerformAction(input_field, kAXRaiseAction)
-    except Exception:
-        logger.exception("Failed to raise chat input field via AX")
-
-    try:
-        click_element_center(input_field)
-    except Exception:
-        logger.exception("Failed to click chat input field center")
-
-    # Give macOS / WeChat a brief moment to update focus.
-    time.sleep(0.1)
-    return input_field
-
-
 def send_message(text: str) -> None:
     """
     Send a message in the currently open chat by focusing the input
@@ -943,7 +917,9 @@ def send_message(text: str) -> None:
     """
     logger.info("Sending message of length %d characters", len(text))
     ax_app = get_wechat_ax_app()
-    input_field = focus_chat_input(ax_app)
+    input_field = find_input_field(ax_app)
+
+    AXUIElementPerformAction(input_field, kAXRaiseAction)
 
     err = AXUIElementSetAttributeValue(input_field, kAXValueAttribute, text)
     if err != 0:
