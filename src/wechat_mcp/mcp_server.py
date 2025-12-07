@@ -9,7 +9,6 @@ from mcp.server.fastmcp import FastMCP
 from .logging_config import logger
 from .wechat_accessibility import (
     ChatMessage,
-    focus_wechat_window,
     fetch_recent_messages,
     get_current_chat_name,
     open_chat_for_contact,
@@ -36,7 +35,6 @@ def fetch_messages_by_chat(
     """
     try:
         logger.info("Tool fetch_messages_by_chat called for chat=%s", chat_name)
-        focus_wechat_window()
         current_chat = get_current_chat_name()
         same_chat = current_chat == chat_name if current_chat is not None else False
         logger.info(
@@ -98,7 +96,6 @@ def reply_to_messages_by_chat(
         bool(reply_message),
     )
     try:
-        focus_wechat_window()
         current_chat = get_current_chat_name()
         same_chat = current_chat == chat_name if current_chat is not None else False
         logger.info(
