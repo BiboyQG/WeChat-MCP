@@ -5,9 +5,19 @@ This project provides an MCP server that automates WeChat on macOS using the Acc
 - Fetch recent messages for a specific chat (contact or group)
 - Generate and send a reply to a chat based on recent history
 
+## Installation
+
+The WeChat MCP server is published on PyPI as `wechat-mcp-server` and installs a `wechat-mcp` console script.
+
+```bash
+pip install wechat-mcp-server
+```
+
+You can still use [`uv`](https://github.com/astral-sh/uv) for local development and dependency management when working with this repository.
+
 ## Environment setup (using `uv`)
 
-This project uses [`uv`](https://github.com/astral-sh/uv) for dependency and environment management.
+For local development, this project uses `uv` to manage the environment.
 
 1. Install `uv` (if not already installed):
 
@@ -30,7 +40,22 @@ This project uses [`uv`](https://github.com/astral-sh/uv) for dependency and env
   <summary>Claude Code</summary>
 
 ```bash
+# For pip
+claude mcp add --transport stdio wechat-mcp -- wechat-mcp
+# For uv
 claude mcp add --transport stdio wechat-mcp -- uv --directory $(pwd) run wechat-mcp
+```
+
+</details>
+
+<details>
+  <summary>Codex</summary>
+
+```bash
+# For pip
+codex mcp add wechat-mcp -- wechat-mcp
+# For uv
+codex mcp add wechat-mcp -- uv --directory $(pwd) run wechat-mcp
 ```
 
 </details>
