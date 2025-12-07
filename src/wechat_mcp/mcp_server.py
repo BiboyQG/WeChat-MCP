@@ -34,9 +34,7 @@ def fetch_messages_by_chat(
     - Once the chat is open, retrieve recent messages from that chat
     """
     try:
-        logger.info(
-            "Tool fetch_messages_by_chat called for chat=%s", chat_name
-        )
+        logger.info("Tool fetch_messages_by_chat called for chat=%s", chat_name)
         current_chat = get_current_chat_name()
         same_chat = current_chat == chat_name if current_chat is not None else False
         logger.info(

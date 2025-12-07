@@ -199,9 +199,7 @@ def click_element_center(element) -> None:
     event_down = CGEventCreateMouseEvent(
         None, kCGEventLeftMouseDown, CGPoint(cx, cy), 0
     )
-    event_up = CGEventCreateMouseEvent(
-        None, kCGEventLeftMouseUp, CGPoint(cx, cy), 0
-    )
+    event_up = CGEventCreateMouseEvent(None, kCGEventLeftMouseUp, CGPoint(cx, cy), 0)
     CGEventPost(kCGHIDEventTap, event_down)
     CGEventPost(kCGHIDEventTap, event_up)
 
@@ -293,13 +291,9 @@ def open_chat_for_contact(chat_name: str) -> dict[str, Any] | None:
     time.sleep(0.4)
 
     try:
-        found, candidates = _select_contact_from_search_results(
-            ax_app, chat_name
-        )
+        found, candidates = _select_contact_from_search_results(ax_app, chat_name)
         if found:
-            logger.info(
-                "Opened chat for %s via search results", chat_name
-            )
+            logger.info("Opened chat for %s via search results", chat_name)
             time.sleep(0.4)
             return None
 
@@ -406,15 +400,13 @@ def _build_section_headers(entries: list[SearchEntry]) -> dict[str, float]:
             "Chat History",
             "Official Accounts",
             "Internet search results",
-            "More"
+            "More",
         ):
             headers[entry.text] = entry.y
     return headers
 
 
-def _classify_section(
-    entry: SearchEntry, headers: dict[str, float]
-) -> str | None:
+def _classify_section(entry: SearchEntry, headers: dict[str, float]) -> str | None:
     """
     Given an entry and the Y positions of section headers, determine which
     section this entry belongs to by picking the last header above it.
@@ -428,9 +420,7 @@ def _classify_section(
     return section
 
 
-def _find_exact_match_in_entries(
-    entries: list[SearchEntry], contact_name: str
-):
+def _find_exact_match_in_entries(entries: list[SearchEntry], contact_name: str):
     """
     Look for an exact match in the current snapshot of search results.
 
@@ -480,7 +470,14 @@ def _summarize_search_candidates(
 
     for entry in entries:
         # Skip section headers themselves.
-        if entry.text in ("Contacts", "Group Chats", "Chat History", "Official Accounts", "Internet search results", "More"):
+        if entry.text in (
+            "Contacts",
+            "Group Chats",
+            "Chat History",
+            "Official Accounts",
+            "Internet search results",
+            "More",
+        ):
             continue
 
         section = _classify_section(entry, headers)
@@ -541,9 +538,7 @@ def _select_contact_from_search_results(
     update_candidates(entries)
     element = _find_exact_match_in_entries(entries, contact_name)
     if element is not None:
-        logger.info(
-            "Found exact match for %s in initial search results", contact_name
-        )
+        logger.info("Found exact match for %s in initial search results", contact_name)
         click_element_center(element)
         return True, {
             "contacts": list(aggregated_contacts)[:15],
@@ -580,9 +575,7 @@ def _select_contact_from_search_results(
         children = ax_get(search_list, kAXChildrenAttribute) or []
         texts: list[str] = []
         for child in children:
-            txt = ax_get(child, kAXValueAttribute) or ax_get(
-                child, kAXTitleAttribute
-            )
+            txt = ax_get(child, kAXValueAttribute) or ax_get(child, kAXTitleAttribute)
             if isinstance(txt, str) and txt.strip():
                 texts.append(txt)
 
@@ -678,9 +671,7 @@ def post_scroll(center, delta_lines: int) -> None:
     - Negative delta_lines scrolls towards newer content (downwards in history).
     """
     cx, cy = center
-    event = CGEventCreateScrollWheelEvent(
-        None, kCGScrollEventUnitLine, 1, delta_lines
-    )
+    event = CGEventCreateScrollWheelEvent(None, kCGScrollEventUnitLine, 1, delta_lines)
     CGEventSetLocation(event, CGPoint(cx, cy))
     CGEventPost(kCGHIDEventTap, event)
 
@@ -702,9 +693,7 @@ def scroll_to_bottom(msg_list, center) -> None:
         children = ax_get(msg_list, kAXChildrenAttribute) or []
         texts: list[str] = []
         for child in children:
-            txt = ax_get(child, kAXValueAttribute) or ax_get(
-                child, kAXTitleAttribute
-            )
+            txt = ax_get(child, kAXValueAttribute) or ax_get(child, kAXTitleAttribute)
             if txt:
                 texts.append(txt)
         if not texts:
@@ -847,9 +836,7 @@ def fetch_recent_messages(
         visible: list[ChatMessage] = []
 
         for child in children:
-            text = ax_get(child, kAXValueAttribute) or ax_get(
-                child, kAXTitleAttribute
-            )
+            text = ax_get(child, kAXValueAttribute) or ax_get(child, kAXTitleAttribute)
             if not text:
                 continue
 
@@ -860,9 +847,7 @@ def fetch_recent_messages(
             if point is None or size is None:
                 sender: SenderLabel = "UNKNOWN"
             else:
-                sender = classify_sender_for_message(
-                    image, list_origin, point, size
-                )
+                sender = classify_sender_for_message(image, list_origin, point, size)
 
             visible.append(ChatMessage(sender=sender, text=str(text)))
 
