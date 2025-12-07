@@ -92,17 +92,6 @@ def get_wechat_ax_app() -> Any:
     return AXUIElementCreateApplication(app.processIdentifier())
 
 
-def focus_wechat_window() -> None:
-    """
-    Bring the WeChat application window to the foreground.
-
-    This helper centralizes activation logic so callers that only need
-    to ensure focus (such as MCP tools) do not need to work directly
-    with the underlying AX application element.
-    """
-    get_wechat_ax_app()
-
-
 def _normalize_chat_title(name: str) -> str:
     """
     Normalize a WeChat chat title.
