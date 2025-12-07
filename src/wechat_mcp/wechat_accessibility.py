@@ -591,8 +591,8 @@ def _select_contact_from_search_results(
             last_bottom_text = new_last
             stable = 0
 
-        # Positive delta scrolls downwards through the search results list.
-        post_scroll(center, 80)
+        # Negative delta scrolls downwards through the search results list.
+        post_scroll(center, -80)
         time.sleep(0.1)
 
     return False, {
@@ -666,8 +666,9 @@ def post_scroll(center, delta_lines: int) -> None:
     """
     Post a scroll-wheel event at the given screen position.
 
-    Positive delta_lines scrolls towards newer messages (bottom of history),
-    negative towards older messages (top of history).
+    On a standard macOS configuration:
+    - Positive delta_lines scrolls towards older content (upwards in history).
+    - Negative delta_lines scrolls towards newer content (downwards in history).
     """
     cx, cy = center
     event = CGEventCreateScrollWheelEvent(
@@ -680,15 +681,15 @@ def post_scroll(center, delta_lines: int) -> None:
 def scroll_to_bottom(msg_list, center) -> None:
     """
     Scroll the messages list to the bottom (newest messages) by repeatedly
-    sending large positive scroll events until the last visible message
+    sending large negative scroll events until the last visible message
     stabilizes.
     """
     last_text = None
     stable = 0
 
     for _ in range(40):
-        # Positive delta moves towards newer messages (bottom of history).
-        post_scroll(center, 1000)
+        # Negative delta moves towards newer messages (bottom of history).
+        post_scroll(center, -1000)
         time.sleep(0.05)
 
         children = ax_get(msg_list, kAXChildrenAttribute) or []
@@ -718,8 +719,8 @@ def scroll_up_small(center) -> None:
     """
     Scroll slightly upwards to reveal older messages.
     """
-    # Negative delta scrolls towards older messages.
-    post_scroll(center, -50)
+    # Positive delta scrolls towards older messages.
+    post_scroll(center, 50)
     time.sleep(0.1)
 
 
