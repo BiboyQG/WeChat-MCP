@@ -1,11 +1,11 @@
 # WeChat-MCP 子代理使用指南
 
-本项目包含 6 个专门为 WeChat-MCP 设计的智能子代理（Sub-agents），帮助用户更高效地管理和使用微信聊天功能。
+本项目包含 5 个专门为 WeChat-MCP 设计的智能子代理（Sub-agents），帮助用户更高效地管理和使用微信聊天功能。
 
 ## 📋 子代理列表
 
 <details>
-<summary>### 1. 聊天记录总结器 (chat-summarizer)</summary>
+<summary>聊天记录总结器 (chat-summarizer)</summary>
 
 **用途**：总结指定聊天的历史消息，提取重要信息、事实和话题
 
@@ -28,44 +28,8 @@
 
 </details>
 
----
-
 <details>
-<summary>### 2. 消息撰写发送器 (message-composer)</summary>
-
-**用途**：根据用户的想法和聊天历史，智能撰写符合语境的消息并发送
-
-**使用场景**：
-
-- 不确定如何措辞时
-- 需要符合关系和语气的表达
-- 想要发送得体的消息
-
-**使用方法**：
-
-```
-使用 message-composer 帮我给老板发消息，说项目已经完成了
-用 message-composer 告诉小红周末一起吃饭
-```
-
-**参数**：
-
-- `chat_name`: 目标聊天对象
-- `user_content`: 你想表达的内容（可以是简单的想法）
-
-**特点**：
-
-- 自动分析聊天历史推断关系
-- 根据关系调整语气（亲密/正式/礼貌等）
-- 长消息自动拆分为多条短消息
-- 符合微信聊天习惯
-
-</details>
-
----
-
-<details>
-<summary>### 3. 自动回复器 (auto-replier)</summary>
+<summary>自动回复器 (auto-replier)</summary>
 
 **用途**：读取最近消息，理解上下文后自动生成并发送回复
 
@@ -95,10 +59,8 @@
 
 </details>
 
----
-
 <details>
-<summary>### 4. 消息搜索器 (message-searcher)</summary>
+<summary>消息搜索器 (message-searcher)</summary>
 
 **用途**：在聊天历史中搜索特定内容、关键词或话题
 
@@ -129,10 +91,8 @@
 
 </details>
 
----
-
 <details>
-<summary>### 5. 多聊天监控器 (multi-chat-checker)</summary>
+<summary>多聊天监控器 (multi-chat-checker)</summary>
 
 **用途**：同时检查多个聊天的最新消息，识别重要和需要回复的内容
 
@@ -163,10 +123,8 @@
 
 </details>
 
----
-
 <details>
-<summary>### 6. 聊天洞察分析器 (chat-insights)</summary>
+<summary>聊天洞察分析器 (chat-insights)</summary>
 
 **用途**：深入分析聊天模式、关系动态和沟通习惯，提供洞察和建议
 
