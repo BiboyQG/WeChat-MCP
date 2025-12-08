@@ -222,3 +222,4 @@ The search implementation prefers exact matches. If a contact name is not found:
 - [x] Scroll to get full/more history messages
 - [x] Prefer exact match in Contacts/Group Chats search results
 - [ ] Support WeChat with Chinese language
+- [ ] Identify OTHER with explicit name
