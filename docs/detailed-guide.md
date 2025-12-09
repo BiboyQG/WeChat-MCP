@@ -44,6 +44,28 @@ If an error occurs, the tools return an object containing an `"error"` field des
 
 Internally, `fetch_messages_by_chat` scrolls the WeChat message list using the system's standard macOS scroll semantics (no third‑party scroll reversal tools enabled) and continues scrolling until it has assembled the true last `last_n` messages or reached the beginning of the chat history, rather than stopping after a fixed number of scroll steps.
 
+### `add_contact_by_wechat_id`
+
+**Signature**:\
+`add_contact_by_wechat_id(wechat_id: str, friending_msg: str | null = null, remark: str | null = null, tags: str | null = null, privacy: str | null = null, hide_my_posts: bool = false, hide_their_posts: bool = false) -> dict`
+
+Adds a new contact using a WeChat ID by driving WeChat’s built‑in “Add Contacts” and “Send Friend Request” flows via the Accessibility API. It:
+
+- Types the given `wechat_id` into the global search box via `focus_and_type_search`.
+- In the search results list, finds the **“Search WeChat ID”** card and clicks it.
+- Waits for the **“Add Contacts”** window and clicks the **“Add to Contacts”** button (AXButton with identifier `add_friend_button`).
+- Waits for the **“Send Friend Request”** window and optionally customizes:
+  - The **friending message** (AXTextArea titled `"Send Friend Request"`).
+  - The **remark** (AXTextField titled `"ModifyRemark"`).
+  - The **privacy** section:
+    - `privacy = "all"` (default) selects `"Chats, Moments, WeRun, etc."` and applies:
+      - `hide_my_posts` → checkbox titled `"Hide My Posts"`
+      - `hide_their_posts` → checkbox titled `"Hide Their Posts"`
+    - `privacy = "chats_only"` selects `"Chats Only"` and ignores the hide flags.
+- Finally clicks the **“OK”** button to submit the friend request.
+
+On success it returns a JSON object describing the applied settings (including `wechat_id`, `friending_msg`, `remark`, `tags`, `privacy`, and post‑visibility flags). If any step fails (for example the “Search WeChat ID” card is missing or a window does not appear), it returns an object with an `"error"` description, the `wechat_id`, and a `"stage"` field indicating which step failed.
+
 ## Architecture
 
 ### Core Components
@@ -55,7 +77,10 @@ The project consists of several key modules:
 The main MCP server implementation that:
 
 - Creates a `FastMCP` server instance
-- Defines the two tool functions decorated with `@mcp.tool()`
+- Defines the tool functions decorated with `@mcp.tool()`
+  - `fetch_messages_by_chat(...)`
+  - `reply_to_messages_by_chat(...)`
+  - `add_contact_by_wechat_id(...)`
 - Handles multiple transport types (stdio, streamable-http, sse)
 - Provides the main entry point via the `main()` function
 
@@ -94,6 +119,18 @@ Contains all the low-level Accessibility API interactions:
 - `_expand_section_if_needed(search_list, section_title)` - Click "View All"
 - `_select_contact_from_search_results(ax_app, contact_name)` - Smart search with scrolling
 - `_summarize_search_candidates(entries)` - Extract up to 15 contact + group names
+
+**Contact management:**
+
+- `add_contact_by_wechat_id(wechat_id, friending_msg, remark, tags, privacy, hide_my_posts, hide_their_posts)` - Add a new contact using a WeChat ID by:
+  - Typing the ID into the global search box
+  - Clicking the `"Search WeChat ID"` result card in the search list
+  - Using the `"Add Contacts"` window to press `"Add to Contacts"`
+  - Configuring the `"Send Friend Request"` window (friending message, remark, privacy, post‑visibility checkboxes) and clicking `"OK"`
+- Helper functions:
+  - `_click_more_card_by_title(ax_app, label)` - Click a search result card by its visible label (e.g. `"Search WeChat ID"`)
+  - `_wait_for_window(ax_app, title)` / `_find_window_by_title(ax_app, title)` - Locate and wait for WeChat windows such as `"Add Contacts"` and `"Send Friend Request"`
+  - `_configure_friend_request_window(...)` - Apply friending message, remark, privacy, and post‑visibility settings in the `"Send Friend Request"` window
 
 **Message fetching:**
 
@@ -230,7 +267,7 @@ The search implementation prefers exact matches. If a contact name is not found:
 - [x] Detect and switch to contact by clicking
 - [x] Scroll to get full/more history messages
 - [x] Prefer exact match in Contacts/Group Chats search results
-- [ ] Add contact using WeChat ID
+- [x] Add contact using WeChat ID
 - [ ] Publish moment w/o media
 - [ ] Support WeChat with Chinese language
 - [ ] Identify OTHER with explicit name

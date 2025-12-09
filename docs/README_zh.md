@@ -16,6 +16,7 @@
 
 - 📨 获取任何聊天（联系人或群组）的最近消息
 - ✍️ 基于聊天历史自动发送回复
+- 👥 通过微信号添加联系人并配置隐私选项
 - 🤖 5 个专门为微信自动化设计的 Claude Code 子代理
 - 🔍 智能聊天搜索，支持精确名称匹配
 - 📜 完整的消息历史滚动和捕获
@@ -78,6 +79,7 @@ wechat-mcp --transport sse --port 3001
 
 - **`fetch_messages_by_chat`** - 获取聊天的最近消息
 - **`reply_to_messages_by_chat`** - 向聊天发送回复
+- **`add_contact_by_wechat_id`** - 通过微信号添加联系人并发送好友申请
 
 完整的工具规格请查看[详细 API 文档](detailed-guide.md)。
 

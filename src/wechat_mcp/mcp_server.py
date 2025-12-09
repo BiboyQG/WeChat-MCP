@@ -9,6 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from .logging_config import logger
 from .wechat_accessibility import (
     ChatMessage,
+    add_contact_by_wechat_id as ax_add_contact_by_wechat_id,
     fetch_recent_messages,
     get_current_chat_name,
     open_chat_for_contact,
@@ -146,6 +147,62 @@ def reply_to_messages_by_chat(
         return {
             "error": str(exc),
             "chat_name": chat_name,
+        }
+
+
+@mcp.tool()
+def add_contact_by_wechat_id(
+    wechat_id: str,
+    friending_msg: str | None = None,
+    remark: str | None = None,
+    tags: str | None = None,
+    privacy: str | None = None,
+    hide_my_posts: bool = False,
+    hide_their_posts: bool = False,
+) -> dict[str, Any]:
+    """
+    Add a new contact using a WeChat ID.
+
+    This tool automates the WeChat flow:
+    - Type the given WeChat ID into the global search box.
+    - Click the "Search WeChat ID" card under the "More" section.
+    - In the "Add Contacts" window, click "Add to Contacts".
+    - In the "Send Friend Request" window, optionally customize the
+      friending message, remark, and privacy options, then confirm.
+
+    The `privacy` argument controls the "Privacy" section of the
+    friend-request window:
+    - "all" (default) selects "Chats, Moments, WeRun, etc." and applies
+      the `hide_my_posts` / `hide_their_posts` flags.
+    - "chats_only" selects "Chats Only" and ignores the hide flags.
+    """
+    logger.info(
+        "Tool add_contact_by_wechat_id called for ID=%s (privacy=%r, hide_my_posts=%s, hide_their_posts=%s)",
+        wechat_id,
+        privacy,
+        hide_my_posts,
+        hide_their_posts,
+    )
+    try:
+        result = ax_add_contact_by_wechat_id(
+            wechat_id=wechat_id,
+            friending_msg=friending_msg,
+            remark=remark,
+            tags=tags,
+            privacy=privacy,
+            hide_my_posts=hide_my_posts,
+            hide_their_posts=hide_their_posts,
+        )
+        return result
+    except Exception as exc:
+        logger.exception(
+            "Error in add_contact_by_wechat_id for ID=%s: %s",
+            wechat_id,
+            exc,
+        )
+        return {
+            "error": str(exc),
+            "wechat_id": wechat_id,
         }
 
 
