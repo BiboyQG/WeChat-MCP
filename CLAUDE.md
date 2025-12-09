@@ -4,6 +4,7 @@
 
 - `fetch_messages_by_chat(chat_name, last_n)`
 - `reply_to_messages_by_chat(chat_name, reply_message, last_n)`
+- `add_contact_by_wechat_id(wechat_id, friending_msg, remark, tags, privacy, hide_my_posts, hide_their_posts)`
 
 使用规则：
 
