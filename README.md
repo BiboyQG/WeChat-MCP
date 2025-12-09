@@ -16,6 +16,7 @@ An MCP server that automates WeChat on macOS using the Accessibility API and scr
 
 - 📨 Fetch recent messages from any chat (contact or group)
 - ✍️ Send automated replies based on chat history
+- 👥 Add contacts using WeChat ID with configurable privacy
 - 🤖 5 specialized Claude Code sub-agents for smart WeChat automation
 - 🔍 Smart chat search with exact name matching
 - 📜 Full message history scrolling and capture
@@ -78,6 +79,7 @@ wechat-mcp --transport sse --port 3001
 
 - **`fetch_messages_by_chat`** - Get recent messages from a chat
 - **`reply_to_messages_by_chat`** - Send a reply to a chat
+- **`add_contact_by_wechat_id`** - Add a new contact using a WeChat ID and send a friend request
 
 See [detailed API documentation](docs/detailed-guide.md) for full tool specifications.
 
