@@ -53,6 +53,7 @@ The project consists of several key modules:
 #### `src/wechat_mcp/mcp_server.py`
 
 The main MCP server implementation that:
+
 - Creates a `FastMCP` server instance
 - Defines the two tool functions decorated with `@mcp.tool()`
 - Handles multiple transport types (stdio, streamable-http, sse)
@@ -63,17 +64,20 @@ The main MCP server implementation that:
 Contains all the low-level Accessibility API interactions:
 
 **Low-level Accessibility API helpers:**
+
 - `ax_get(element, attribute)` - Get accessibility element attributes
 - `dfs(element, predicate)` - Depth-first search in accessibility tree
 - `click_element_center(element)` - Synthesize mouse click
 - `send_key_with_modifiers(keycode, flags)` - Keyboard input simulation
 
 **WeChat app interaction:**
+
 - `get_wechat_ax_app()` - Get/activate WeChat application
 - `get_current_chat_name()` - Get title of currently open chat
 - `_normalize_chat_title(name)` - Strip group member count suffix like "(23)"
 
 **Chat navigation:**
+
 - `find_chat_element_by_name(ax_app, chat_name)` - Find chat in session list
 - `open_chat_for_contact(chat_name)` - Open chat with smart fallback behavior:
   1. First tries sidebar session list
@@ -83,6 +87,7 @@ Contains all the low-level Accessibility API interactions:
   5. Returns error + candidates list if no exact match found
 
 **Search functionality:**
+
 - `find_search_field(ax_app)` - Locate WeChat search input
 - `focus_and_type_search(ax_app, text)` - Type into search via clipboard + keyboard
 - `get_search_list(ax_app)` - Find search results list
@@ -91,6 +96,7 @@ Contains all the low-level Accessibility API interactions:
 - `_summarize_search_candidates(entries)` - Extract up to 15 contact + group names
 
 **Message fetching:**
+
 - `get_messages_list(ax_app)` - Find "Messages" list in UI
 - `fetch_recent_messages(last_n=100, max_scrolls=None)` - Core algorithm:
   1. Scrolls to bottom (newest messages)
@@ -106,10 +112,12 @@ Contains all the low-level Accessibility API interactions:
 - `post_scroll(center, delta_lines)` - Send scroll-wheel events
 
 **Sender classification:**
+
 - `classify_sender_for_message(image, list_origin, message_pos, message_size)` - Pixel-based heuristic
 - `count_colored_pixels(image, left, top, right, bottom)` - Image processing
 
 **Message sending:**
+
 - `send_message(text)` - Send a message via Accessibility API
 - `find_input_field(ax_app)` - Locate chat input field
 - `press_return()` - Synthesize Return key press
@@ -117,6 +125,7 @@ Contains all the low-level Accessibility API interactions:
 #### `src/wechat_mcp/logging_config.py`
 
 Configures dual logging:
+
 - File handler: writes to `logs/wechat_mcp.log` (DEBUG level)
 - Console handler: writes to stdout (INFO level)
 - Customizable via `WECHAT_MCP_LOG_DIR` environment variable
