@@ -221,5 +221,7 @@ The search implementation prefers exact matches. If a contact name is not found:
 - [x] Detect and switch to contact by clicking
 - [x] Scroll to get full/more history messages
 - [x] Prefer exact match in Contacts/Group Chats search results
+- [ ] Add contact using WeChat ID
+- [ ] Publish moment w/o media
 - [ ] Support WeChat with Chinese language
 - [ ] Identify OTHER with explicit name
