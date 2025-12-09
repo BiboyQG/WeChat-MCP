@@ -277,6 +277,7 @@ The search implementation prefers exact matches. If a contact name is not found:
 - [x] Prefer exact match in Contacts/Group Chats search results
 - [x] Add contact using WeChat ID
 - [x] Refactor wechat accessibility codebase
+- [ ] Edit contact/group chat info
 - [ ] Publish moment w/o media
 - [ ] Support WeChat with Chinese language
 - [ ] Identify OTHER with explicit name
