@@ -220,12 +220,6 @@ def main() -> None:
         default="stdio",
         help="Transport protocol to use (default: stdio)",
     )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=3001,
-        help="Port for HTTP transport (default: 3001)",
-    )
 
     args = parser.parse_args()
 
@@ -249,9 +243,9 @@ def main() -> None:
     if args.transport == "stdio":
         mcp.run()
     elif args.transport == "streamable-http":
-        mcp.run(transport="streamable-http", port=args.port)
+        mcp.run(transport="streamable-http")
     elif args.transport == "sse":
-        mcp.run(transport="sse", port=args.port)
+        mcp.run(transport="sse")
 
 
 if __name__ == "__main__":
