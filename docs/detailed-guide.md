@@ -292,5 +292,6 @@ The search implementation prefers exact matches. If a contact name is not found:
 - [x] Refactor wechat accessibility codebase
 - [ ] Edit contact/group chat info
 - [x] Publish moment w/o media
+- [ ] Fetch moments by chat name
 - [ ] Support WeChat with Chinese language
 - [ ] Identify OTHER with explicit name
