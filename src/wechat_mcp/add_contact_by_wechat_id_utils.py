@@ -18,7 +18,6 @@ from ApplicationServices import (
 
 from .logging_config import logger
 from .wechat_accessibility import (
-    _find_window_by_title,
     _wait_for_window,
     _collect_search_entries,
     ax_get,
