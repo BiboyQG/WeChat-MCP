@@ -16,10 +16,10 @@ An MCP server that automates WeChat on macOS using the Accessibility API and scr
 
 - 📨 Fetch recent messages from any chat (contact or group)
 - ✍️ Send automated replies based on chat history
+- 📷 Publish text-only Moments posts, with optional draft-only mode via `publish=False`
 - 👥 Add contacts using WeChat ID with configurable privacy
-- 🤖 5 specialized Claude Code sub-agents for smart WeChat automation
 - 🔍 Smart chat search with exact name matching
-- 📜 Full message history scrolling and capture
+- 🤖 5 specialized Claude Code sub-agents for smart WeChat automation
 
 ## Quick Start
 
