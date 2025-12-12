@@ -163,7 +163,7 @@
 | 需求                   | 推荐子代理         |
 | ---------------------- | ------------------ |
 | 了解聊天内容           | chat-summarizer    |
-| 发送消息但不知道怎么说 | message-composer   |
+| 发送消息但不知道怎么说 | auto-replier       |
 | 快速回复消息           | auto-replier       |
 | 查找历史信息           | message-searcher   |
 | 批量检查多个聊天       | multi-chat-checker |
@@ -181,12 +181,12 @@
 
   - 工具：`mcp__wechat-mcp__fetch_messages_by_chat`
 
-- **读取+发送**：message-composer, auto-replier
+- **读取+发送**：auto-replier
   - 工具：`mcp__wechat-mcp__fetch_messages_by_chat`, `mcp__wechat-mcp__reply_to_messages_by_chat`
 
 ### 模型选择
 
-- **Sonnet 模型**：chat-summarizer, message-composer, chat-insights
+- **Sonnet 模型**：chat-summarizer, auto-replier, chat-insights
 
   - 需要深度理解和复杂推理
 

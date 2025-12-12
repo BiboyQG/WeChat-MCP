@@ -10,6 +10,7 @@ from ApplicationServices import (
     AXUIElementCreateApplication,
     AXUIElementCopyAttributeValue,
     AXUIElementPerformAction,
+    AXUIElementSetAttributeValue,
     AXValueGetType,
     AXValueGetValue,
     kAXChildrenAttribute,
@@ -286,7 +287,9 @@ def focus_and_type_search(ax_app, text: str):
     AXUIElementPerformAction(search, kAXRaiseAction)
 
     # Clear any existing value via AX (best effort).
-    AXUIElementCopyAttributeValue(search, kAXValueAttribute, None)
+    err = AXUIElementSetAttributeValue(search, kAXValueAttribute, "")
+    if err != 0:
+        logger.debug("Failed to clear search field via AX (err=%s)", err)
 
     pb = AppKit.NSPasteboard.generalPasteboard()
     pb.clearContents()

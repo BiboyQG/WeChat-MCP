@@ -192,7 +192,7 @@ Configures dual logging:
 
 The project has a comprehensive logging setup:
 
-- Logs are written to a rotating file under the `logs/` directory (by default `logs/wechat_mcp.log`)
+- Logs are written to a file under the `logs/` directory (by default `logs/wechat_mcp.log`)
 - Logs are also sent to the terminal (stdout)
 
 You can customize the log directory via:
