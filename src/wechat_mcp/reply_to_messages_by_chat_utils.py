@@ -21,17 +21,26 @@ from Quartz import (
 )
 
 from .logging_config import logger
-from .wechat_accessibility import ax_get, dfs, get_wechat_ax_app
+from .wechat_accessibility import (
+    ax_get,
+    dfs,
+    get_wechat_ax_app,
+    send_key_with_modifiers,
+)
+
+# ANSI keyboard keycodes (US layout)
+KEYCODE_ANSI_A = 0
+KEYCODE_ANSI_V = 9
+KEYCODE_RETURN = 36
 
 
 def press_return() -> None:
     """
     Synthesize a Return key press.
     """
-    keycode_return = 36
-    event_down = CGEventCreateKeyboardEvent(None, keycode_return, True)
+    event_down = CGEventCreateKeyboardEvent(None, KEYCODE_RETURN, True)
     CGEventSetFlags(event_down, 0)
-    event_up = CGEventCreateKeyboardEvent(None, keycode_return, False)
+    event_up = CGEventCreateKeyboardEvent(None, KEYCODE_RETURN, False)
     CGEventSetFlags(event_up, 0)
     CGEventPost(kCGHIDEventTap, event_down)
     CGEventPost(kCGHIDEventTap, event_up)
@@ -51,18 +60,6 @@ def find_input_field(ax_app: Any):
             "Could not find WeChat chat input field via Accessibility API"
         )
     return input_field
-
-
-def send_key_with_modifiers(keycode: int, flags: int):
-    """
-    Send a keyboard event with modifiers (e.g., Cmd+V).
-    """
-    event_down = CGEventCreateKeyboardEvent(None, keycode, True)
-    CGEventSetFlags(event_down, flags)
-    event_up = CGEventCreateKeyboardEvent(None, keycode, False)
-    CGEventSetFlags(event_up, flags)
-    CGEventPost(kCGHIDEventTap, event_down)
-    CGEventPost(kCGHIDEventTap, event_up)
 
 
 def send_message(text: str) -> None:
@@ -102,35 +99,40 @@ def send_message(text: str) -> None:
         )
 
         # Clear the field first (Cmd+A to select all)
-        keycode_a = 0  # US keyboard 'A'
-        send_key_with_modifiers(keycode_a, kCGEventFlagMaskCommand)
+        send_key_with_modifiers(KEYCODE_ANSI_A, kCGEventFlagMaskCommand)
         time.sleep(0.05)
 
-        # Copy text to pasteboard
+        # Copy text to pasteboard, while preserving user's clipboard
         pb = AppKit.NSPasteboard.generalPasteboard()
-        pb.clearContents()
-        pb.setString_forType_(text, AppKit.NSPasteboardTypeString)
-        time.sleep(0.05)
+        saved_items = pb.pasteboardItems()
+        try:
+            pb.clearContents()
+            pb.setString_forType_(text, AppKit.NSPasteboardTypeString)
+            time.sleep(0.05)
 
-        # Paste (Cmd+V)
-        keycode_v = 9  # US keyboard 'V'
-        send_key_with_modifiers(keycode_v, kCGEventFlagMaskCommand)
-        time.sleep(0.1)
+            # Paste (Cmd+V)
+            send_key_with_modifiers(KEYCODE_ANSI_V, kCGEventFlagMaskCommand)
+            time.sleep(0.1)
 
-        # Verify again
-        actual_value = ax_get(input_field, kAXValueAttribute)
-        if actual_value != text:
-            logger.error(
-                "Failed to set message text even with keyboard simulation. "
-                "Expected %r, got %r",
-                text,
-                actual_value,
-            )
-            raise RuntimeError(
-                f"Failed to set input text. Expected {text!r}, got {actual_value!r}"
-            )
+            # Verify again
+            actual_value = ax_get(input_field, kAXValueAttribute)
+            if actual_value != text:
+                logger.error(
+                    "Failed to set message text even with keyboard simulation. "
+                    "Expected %r, got %r",
+                    text,
+                    actual_value,
+                )
+                raise RuntimeError(
+                    f"Failed to set input text. Expected {text!r}, got {actual_value!r}"
+                )
 
-        logger.info("Successfully set message text via keyboard simulation")
+            logger.info("Successfully set message text via keyboard simulation")
+        finally:
+            # Restore original pasteboard content
+            pb.clearContents()
+            if saved_items:
+                pb.writeObjects_(saved_items)
 
     # Send the message with retry logic to handle concurrent user interaction
     max_retries = 5
@@ -141,14 +143,16 @@ def send_message(text: str) -> None:
 
         # Press Return to send
         press_return()
-        time.sleep(0.3)
 
-        # Check if the input field is now empty (message was sent)
-        final_value = ax_get(input_field, kAXValueAttribute)
-
-        if not final_value or not final_value.strip():
-            logger.info("Message sent successfully")
-            return
+        # Wait for input field to clear, with a timeout (polling approach)
+        timeout = time.time() + 1.0  # 1 second timeout
+        final_value = None
+        while time.time() < timeout:
+            final_value = ax_get(input_field, kAXValueAttribute)
+            if not final_value or not final_value.strip():
+                logger.info("Message sent successfully")
+                return
+            time.sleep(0.1)
 
         # Message not sent yet, log and retry
         logger.warning(
