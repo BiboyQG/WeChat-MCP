@@ -44,6 +44,31 @@ If an error occurs, the tools return an object containing an `"error"` field des
 
 Internally, `fetch_messages_by_chat` scrolls the WeChat message list using the system's standard macOS scroll semantics (no third‑party scroll reversal tools enabled) and continues scrolling until it has assembled the true last `last_n` messages or reached the beginning of the chat history, rather than stopping after a fixed number of scroll steps.
 
+### `quote_reply_to_message`
+
+**Signature**: `quote_reply_to_message(chat_name: str, target_text: str, reply_message: str) -> dict`
+
+Quotes a specific message in the given chat and sends a reply with the quoted context attached. This tool:
+
+- Opens the specified chat (or stays in the current one if it already matches).
+- Finds the message whose text contains `target_text` in the visible message list.
+- Right-clicks on that message to open the context menu.
+- Clicks the "Quote" menu item to attach the quoted message to the input field.
+- Types the `reply_message` and sends it.
+
+The `target_text` should be a unique substring of the message you want to quote. Returns:
+
+```json
+{
+  "chat_name": "The chat (contact or group)",
+  "quoted_text": "The text that was quoted",
+  "reply_text": "The reply that was sent",
+  "sent": true
+}
+```
+
+If the target message is not found in the visible messages, or the context menu "Quote" item cannot be located, the tool returns an `"error"` description.
+
 ### `add_contact_by_wechat_id`
 
 **Signature**:\
@@ -80,6 +105,7 @@ The main MCP server implementation that:
 - Defines the tool functions decorated with `@mcp.tool()`
   - `fetch_messages_by_chat(...)`
   - `reply_to_messages_by_chat(...)`
+  - `quote_reply_to_message(...)`
   - `add_contact_by_wechat_id(...)`
 - Handles multiple transport types (stdio, streamable-http, sse)
 - Provides the main entry point via the `main()` function
@@ -179,6 +205,16 @@ Contains the helpers used by `reply_to_messages_by_chat` for sending messages:
 - `send_message(text)` - Send a message via Accessibility API
 - `find_input_field(ax_app)` - Locate chat input field
 - `press_return()` - Synthesize Return key press
+
+#### `src/wechat_mcp/quote_reply_utils.py`
+
+Contains the helpers used by `quote_reply_to_message` for quoting and replying:
+
+- `quote_and_reply(target_text, reply_text)` - Main function: find message, right-click, quote, and send reply
+- `right_click_element_center(element)` - Synthesize a right mouse click at element center
+- `find_context_menu_item(ax_app, item_title, timeout)` - Wait for and find a context menu item by title
+- `find_message_element(msg_list, target_text)` - Find a message element containing the target text
+- `dismiss_context_menu(ax_app)` - Press Escape to dismiss any open context menu
 
 #### `src/wechat_mcp/logging_config.py`
 
@@ -295,3 +331,4 @@ The search implementation prefers exact matches. If a contact name is not found:
 - [ ] Fetch moments by chat name
 - [ ] Support WeChat with Chinese language
 - [ ] Identify OTHER with explicit name
+
