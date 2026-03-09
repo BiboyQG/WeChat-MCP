@@ -258,6 +258,7 @@ function App() {
   const [language, setLanguage] = useState<Language>('en')
   const [stars, setStars] = useState<number | null>(null)
   const [view, setView] = useState<View>('overview')
+  const [showPreviousReleases, setShowPreviousReleases] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -477,178 +478,246 @@ function App() {
                 <p className="changelog-subtitle">{t.changelog.subtitle}</p>
               </header>
 
-              <article className="release-card">
-                <header className="release-header">
-                  <div>
-                    <div className="release-version">v0.2.0</div>
-                    <div className="release-label">
-                      {language === 'en'
-                        ? 'Packaging fix and expanded toolset'
-                        : '安装修复与工具扩展'}
+              <div className="release-stack">
+                <article className="release-card">
+                  <header className="release-header">
+                    <div>
+                      <div className="release-version">v0.2.0</div>
+                      <div className="release-label">
+                        {language === 'en'
+                          ? 'Packaging fix and expanded toolset'
+                          : '安装修复与工具扩展'}
+                      </div>
+                    </div>
+                    <div className="release-badges">
+                      <span className="release-pill">PyPI • wechat-mcp-server</span>
+                      <span className="release-pill release-pill-soft">
+                        {language === 'en' ? 'Alpha' : '测试版'}
+                      </span>
+                    </div>
+                  </header>
+
+                  <p className="release-summary">
+                    {language === 'en'
+                      ? 'v0.2.0 adds contact and Moments automation while fixing the wheel packaging issue so installed wechat-mcp commands work correctly after pip install.'
+                      : 'v0.2.0 新增了联系人与朋友圈自动化能力，并修复了 wheel 打包问题，使通过 pip 安装后的 wechat-mcp 命令可以正常运行。'}
+                  </p>
+
+                  <div className="release-install">
+                    <div className="release-install-label">
+                      {language === 'en' ? 'Upgrade' : '升级'}
+                    </div>
+                    <pre className="code-snippet">
+                      <code>pip install -U wechat-mcp-server</code>
+                    </pre>
+                  </div>
+
+                  <div className="release-section">
+                    <h3>{language === 'en' ? 'Highlights' : '亮点'}</h3>
+                    <ul>
+                      <li>
+                        {language === 'en'
+                          ? 'Added add_contact_by_wechat_id to search a WeChat ID, open the add-contact flow, and send a friend request with optional remark, tags, and privacy settings.'
+                          : '新增 add_contact_by_wechat_id，可按微信号搜索联系人、打开加好友流程，并携带备注、标签和隐私选项发送好友申请。'}
+                      </li>
+                      <li>
+                        {language === 'en'
+                          ? 'Added publish_moment_without_media for text-only Moments posts, including a draft-only mode with publish=False.'
+                          : '新增 publish_moment_without_media，可发布纯文字朋友圈，并支持通过 publish=False 仅生成草稿。'}
+                      </li>
+                      <li>
+                        {language === 'en'
+                          ? 'Fixed the published wheel so pip installs now include the importable wechat_mcp package and a working wechat-mcp CLI.'
+                          : '修复已发布 wheel 的内容，使 pip 安装后会正确包含可导入的 wechat_mcp 包和可用的 wechat-mcp 命令。'}
+                      </li>
+                      <li>
+                        {language === 'en'
+                          ? 'Improved search clearing, chat selection reliability, and Moments composer timing for more stable automation.'
+                          : '改进搜索框清理、聊天选择稳定性和朋友圈编辑器交互时序，提升自动化可靠性。'}
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="release-section">
+                    <h3>{language === 'en' ? 'Since v0.1.0' : '相较 v0.1.0'}</h3>
+                    <ul>
+                      <li>
+                        {language === 'en'
+                          ? 'Added two user-facing MCP tools: add_contact_by_wechat_id(...) and publish_moment_without_media(...).'
+                          : '新增两个面向用户的 MCP 工具：add_contact_by_wechat_id(...) 与 publish_moment_without_media(...).'}
+                      </li>
+                      <li>
+                        {language === 'en'
+                          ? 'Expanded setup documentation for Claude Desktop, Codex, and local uv-based development.'
+                          : '补充了 Claude Desktop、Codex 与本地 uv 开发的配置文档。'}
+                      </li>
+                      <li>
+                        {language === 'en'
+                          ? 'Split smoke scripts by tool and cleaned up test and documentation coverage around the new flows.'
+                          : '按工具拆分了 smoke 脚本，并补充了围绕新流程的测试与文档整理。'}
+                      </li>
+                    </ul>
+                  </div>
+                </article>
+
+                <section className={`previous-releases ${showPreviousReleases ? 'previous-releases-open' : ''}`}>
+                  <button
+                    type="button"
+                    className="previous-releases-toggle"
+                    onClick={() => setShowPreviousReleases(prev => !prev)}
+                    aria-expanded={showPreviousReleases}
+                  >
+                    <span>
+                      {language === 'en' ? 'View previous releases' : '查看更早版本'}
+                    </span>
+                    <span className="previous-releases-meta">
+                      {language === 'en' ? 'v0.1.0 and earlier' : 'v0.1.0 及更早版本'}
+                    </span>
+                  </button>
+
+                  <div className="previous-releases-panel" aria-hidden={!showPreviousReleases}>
+                    <div className="previous-releases-inner">
+                      <article className="release-card release-card-subtle">
+                        <header className="release-header">
+                          <div>
+                            <div className="release-version">v0.1.0</div>
+                            <div className="release-label">
+                              {language === 'en'
+                                ? 'Initial public release'
+                                : '首次公开发布'}
+                            </div>
+                          </div>
+                          <div className="release-badges">
+                            <span className="release-pill">PyPI • wechat-mcp-server</span>
+                            <span className="release-pill release-pill-soft">
+                              {language === 'en' ? 'Alpha' : '测试版'}
+                            </span>
+                          </div>
+                        </header>
+
+                        <p className="release-summary">
+                          {language === 'en'
+                            ? 'Initial public release of the WeChat MCP server, exposing an MCP-compatible interface for reading and replying to WeChat messages on macOS via Accessibility APIs and screen capture.'
+                            : 'WeChat MCP 服务器的首次公开版本，在 macOS 上通过辅助功能 API 和截屏提供读取与回复微信消息的 MCP 接口。'}
+                        </p>
+
+                        <div className="release-install">
+                          <div className="release-install-label">
+                            {language === 'en' ? 'Install' : '安装'}
+                          </div>
+                          <pre className="code-snippet">
+                            <code>pip install wechat-mcp-server</code>
+                          </pre>
+                        </div>
+
+                        <div className="release-section">
+                          <h3>{language === 'en' ? 'Highlights' : '亮点'}</h3>
+                          <ul>
+                            <li>
+                              {language === 'en'
+                                ? 'MCP server exposing WeChat automation tools over stdio, streamable HTTP, or SSE transports.'
+                                : '通过 stdio、streamable HTTP 和 SSE 暴露微信自动化 MCP 工具。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'End-to-end macOS Accessibility integration to locate chats, read message history, and send replies.'
+                                : '完整接入 macOS 辅助功能能力，用于定位聊天、读取消息历史和发送回复。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'Screenshot-based sender classification to distinguish messages from you vs. others.'
+                                : '通过截图启发式区分自己与他人的消息发送者。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'Structured logging to both terminal and rotating log files.'
+                                : '同时输出到终端和日志文件的结构化日志。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'First official PyPI release of wechat-mcp-server.'
+                                : 'wechat-mcp-server 的首次正式 PyPI 发布。'}
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="release-section">
+                          <h3>{language === 'en' ? 'Features' : '功能'}</h3>
+                          <ul>
+                            <li>
+                              {language === 'en'
+                                ? 'MCP server and CLI via the wechat-mcp console script with stdio, HTTP, and SSE transports.'
+                                : '提供 wechat-mcp 命令行入口，支持 stdio、HTTP 和 SSE 传输。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'WeChat tools for fetching messages by chat and replying to messages, with smart handling of ambiguous chat names.'
+                                : '提供按聊天读取消息和发送回复的微信工具，并能智能处理名称歧义。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'macOS Accessibility helpers that drive the WeChat UI, scroll message history, and capture screenshots for sender classification.'
+                                : '利用 macOS 辅助功能驱动微信界面、滚动消息历史并截图判断发送者。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'Logging and observability with configurable log directory and verbose debug mode for MCP and HTTP traffic.'
+                                : '提供可配置日志目录，以及面向 MCP 和 HTTP 交互的详细调试模式。'}
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="release-section">
+                          <h3>{language === 'en' ? 'Requirements' : '要求'}</h3>
+                          <ul>
+                            <li>
+                              {language === 'en'
+                                ? 'macOS with Accessibility and screen capture permissions granted to your terminal or Python.'
+                                : '需要 macOS，并向终端或 Python 授予辅助功能和截屏权限。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'WeChat installed and running on macOS.'
+                                : '需要已安装并运行的 macOS 微信客户端。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'Python 3.12+ with pyobjc, Pillow, and mcp[cli] dependencies.'
+                                : '需要 Python 3.12+，以及 pyobjc、Pillow 和 mcp[cli] 依赖。'}
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="release-section">
+                          <h3>{language === 'en' ? 'Known limitations' : '已知限制'}</h3>
+                          <ul>
+                            <li>
+                              {language === 'en'
+                                ? 'Tested only on the standard macOS WeChat client and default Accessibility structure.'
+                                : '仅在标准 macOS 微信客户端和默认辅助功能结构上验证过。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'Sender classification relies on color heuristics and may misclassify in unusual themes or display conditions.'
+                                : '发送者识别依赖颜色启发式，在特殊主题或显示条件下可能误判。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'Focuses on English or Latin chat names; broader localization is planned.'
+                                : '当前主要面向英文或拉丁字符聊天名，更广泛的本地化仍在规划中。'}
+                            </li>
+                            <li>
+                              {language === 'en'
+                                ? 'Marked as alpha; APIs and behavior may change in future versions.'
+                                : '当前仍为 alpha 版本，API 与行为在后续版本中可能变化。'}
+                            </li>
+                          </ul>
+                        </div>
+                      </article>
                     </div>
                   </div>
-                  <div className="release-badges">
-                    <span className="release-pill">PyPI • wechat-mcp-server</span>
-                    <span className="release-pill release-pill-soft">
-                      {language === 'en' ? 'Alpha' : '测试版'}
-                    </span>
-                  </div>
-                </header>
-
-                <p className="release-summary">
-                  {language === 'en'
-                    ? 'v0.2.0 adds contact and Moments automation while fixing the wheel packaging issue so installed wechat-mcp commands work correctly after pip install.'
-                    : 'v0.2.0 新增了联系人与朋友圈自动化能力，并修复了 wheel 打包问题，使通过 pip 安装后的 wechat-mcp 命令可以正常运行。'}
-                </p>
-
-                <div className="release-install">
-                  <div className="release-install-label">
-                    {language === 'en' ? 'Upgrade' : '升级'}
-                  </div>
-                  <pre className="code-snippet">
-                    <code>pip install -U wechat-mcp-server</code>
-                  </pre>
-                </div>
-
-                <div className="release-section">
-                  <h3>{language === 'en' ? 'Highlights' : '亮点'}</h3>
-                  <ul>
-                    <li>
-                      {language === 'en'
-                        ? 'Added add_contact_by_wechat_id to search a WeChat ID, open the add-contact flow, and send a friend request with optional remark, tags, and privacy settings.'
-                        : '新增 add_contact_by_wechat_id，可按微信号搜索联系人、打开加好友流程，并携带备注、标签和隐私选项发送好友申请。'}
-                    </li>
-                    <li>
-                      {language === 'en'
-                        ? 'Added publish_moment_without_media for text-only Moments posts, including a draft-only mode with publish=False.'
-                        : '新增 publish_moment_without_media，可发布纯文字朋友圈，并支持通过 publish=False 仅生成草稿。'}
-                    </li>
-                    <li>
-                      {language === 'en'
-                        ? 'Fixed the published wheel so pip installs now include the importable wechat_mcp package and a working wechat-mcp CLI.'
-                        : '修复已发布 wheel 的内容，使 pip 安装后会正确包含可导入的 wechat_mcp 包和可用的 wechat-mcp 命令。'}
-                    </li>
-                    <li>
-                      {language === 'en'
-                        ? 'Improved search clearing, chat selection reliability, and Moments composer timing for more stable automation.'
-                        : '改进搜索框清理、聊天选择稳定性和朋友圈编辑器交互时序，提升自动化可靠性。'}
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="release-section">
-                  <h3>{language === 'en' ? 'Since v0.1.0' : '相较 v0.1.0'}</h3>
-                  <ul>
-                    <li>
-                      {language === 'en'
-                        ? 'Added two user-facing MCP tools: add_contact_by_wechat_id(...) and publish_moment_without_media(...).'
-                        : '新增两个面向用户的 MCP 工具：add_contact_by_wechat_id(...) 与 publish_moment_without_media(...).'}
-                    </li>
-                    <li>
-                      {language === 'en'
-                        ? 'Expanded setup documentation for Claude Desktop, Codex, and local uv-based development.'
-                        : '补充了 Claude Desktop、Codex 与本地 uv 开发的配置文档。'}
-                    </li>
-                    <li>
-                      {language === 'en'
-                        ? 'Split smoke scripts by tool and cleaned up test and documentation coverage around the new flows.'
-                        : '按工具拆分了 smoke 脚本，并补充了围绕新流程的测试与文档整理。'}
-                    </li>
-                  </ul>
-                </div>
-              </article>
-
-              <article className="release-card">
-                <header className="release-header">
-                  <div>
-                    <div className="release-version">v0.1.0</div>
-                    <div className="release-label">
-                      {language === 'en'
-                        ? 'Initial public release'
-                        : '首次公开发布'}
-                    </div>
-                  </div>
-                  <div className="release-badges">
-                    <span className="release-pill">PyPI • wechat-mcp-server</span>
-                    <span className="release-pill release-pill-soft">
-                      {language === 'en' ? 'Alpha' : '测试版'}
-                    </span>
-                  </div>
-                </header>
-
-                <p className="release-summary">
-                  {language === 'en'
-                    ? 'Initial public release of the WeChat MCP server, exposing an MCP-compatible interface for reading and replying to WeChat messages on macOS via Accessibility APIs and screen capture.'
-                    : 'WeChat MCP 服务器的首次公开版本，在 macOS 上通过辅助功能 API 和截屏提供读取与回复微信消息的 MCP 接口。'}
-                </p>
-
-                <div className="release-install">
-                  <div className="release-install-label">
-                    {language === 'en' ? 'Install' : '安装'}
-                  </div>
-                  <pre className="code-snippet">
-                    <code>pip install wechat-mcp-server</code>
-                  </pre>
-                </div>
-
-                <div className="release-section">
-                  <h3>Highlights</h3>
-                  <ul>
-                    <li>
-                      MCP server exposing WeChat automation tools over stdio, streamable HTTP, or SSE transports.
-                    </li>
-                    <li>
-                      End-to-end macOS Accessibility integration to locate chats, read message history, and send replies.
-                    </li>
-                    <li>
-                      Screenshot-based sender classification to distinguish messages from you vs. others.
-                    </li>
-                    <li>
-                      Structured logging to both terminal and rotating log files.
-                    </li>
-                    <li>
-                      First official PyPI release of <code>wechat-mcp-server</code>.
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="release-section">
-                  <h3>Features</h3>
-                  <ul>
-                    <li>
-                      <strong>MCP server and CLI</strong> via the <code>wechat-mcp</code> console script with stdio, HTTP, and SSE transports.
-                    </li>
-                    <li>
-                      <strong>WeChat tools</strong> for fetching messages by chat and replying to messages, with smart handling of ambiguous chat names.
-                    </li>
-                    <li>
-                      <strong>macOS Accessibility helpers</strong> that drive the WeChat UI, scroll message history, and capture screenshots for sender classification.
-                    </li>
-                    <li>
-                      <strong>Logging and observability</strong> with configurable log directory and verbose debug mode for MCP and HTTP traffic.
-                    </li>
-                  </ul>
-                </div>
-
-                <div className="release-section">
-                  <h3>Requirements</h3>
-                  <ul>
-                    <li>macOS with Accessibility and screen capture permissions granted to your terminal / Python.</li>
-                    <li>WeChat installed and running on macOS.</li>
-                    <li>Python 3.12+ with <code>pyobjc</code>, <code>Pillow</code>, and <code>mcp[cli]</code> dependencies.</li>
-                  </ul>
-                </div>
-
-                <div className="release-section">
-                  <h3>Known limitations</h3>
-                  <ul>
-                    <li>Tested only on the standard macOS WeChat client and default Accessibility structure.</li>
-                    <li>Sender classification relies on color heuristics and may misclassify in unusual themes or display conditions.</li>
-                    <li>Focuses on English / Latin chat names; broader localization is planned.</li>
-                    <li>Marked as alpha; APIs and behavior may change in future versions.</li>
-                  </ul>
-                </div>
-              </article>
+                </section>
+              </div>
             </div>
           </section>
         )}

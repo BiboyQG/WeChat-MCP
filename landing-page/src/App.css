@@ -613,14 +613,23 @@ body {
   font-size: 1rem;
 }
 
-.release-card {
+.release-stack {
   max-width: 800px;
   margin: 0 auto;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.release-card {
   padding: 2rem 2rem 2.25rem;
   background: var(--bg-elevated);
   border-radius: 16px;
   border: 1px solid var(--border-primary);
   box-shadow: var(--shadow-md);
+}
+
+.release-card-subtle {
+  background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
 }
 
 .release-header {
@@ -698,6 +707,81 @@ body {
   margin-top: 0.35rem;
 }
 
+.previous-releases {
+  border-radius: 18px;
+  border: 1px solid var(--border-primary);
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-elevated) 100%);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.previous-releases-toggle {
+  width: 100%;
+  padding: 1.1rem 1.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.previous-releases-toggle:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.previous-releases-toggle::after {
+  content: '+';
+  flex-shrink: 0;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--text-tertiary);
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+
+.previous-releases-open .previous-releases-toggle::after {
+  transform: rotate(45deg);
+  color: var(--accent-primary);
+}
+
+.previous-releases-meta {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.previous-releases-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s ease;
+}
+
+.previous-releases-open .previous-releases-panel {
+  grid-template-rows: 1fr;
+}
+
+.previous-releases-inner {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 1rem;
+}
+
+.previous-releases-inner .release-card {
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease, margin 0.3s ease;
+  margin: 0;
+}
+
+.previous-releases-open .previous-releases-inner .release-card {
+  opacity: 1;
+  transform: translateY(0);
+  margin: 0 0 1rem;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .header-content {
@@ -761,6 +845,21 @@ body {
 
   .release-header {
     flex-direction: column;
+  }
+
+  .previous-releases-toggle {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .previous-releases-toggle::after {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+  }
+
+  .previous-releases {
+    position: relative;
   }
 }
 
