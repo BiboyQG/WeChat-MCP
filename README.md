@@ -13,9 +13,9 @@
 An MCP server that automates WeChat on macOS using the Accessibility API and screen capture. It enables LLMs to interact with WeChat chats programmatically.
 
 ## Features
-
 - 📨 Fetch recent messages from any chat (contact or group)
 - ✍️ Send automated replies based on chat history
+- 💬 Quote and reply to specific messages with context
 - 📷 Publish text-only Moments posts, with optional draft-only mode
 - 👥 Add contacts using WeChat ID with configurable privacy
 - 🔍 Smart chat search with exact name matching
@@ -112,6 +112,7 @@ wechat-mcp --transport sse
 
 - **`fetch_messages_by_chat`** - Get recent messages from a chat
 - **`reply_to_messages_by_chat`** - Send a reply to a chat
+- **`quote_reply_to_message`** - Quote a specific message and send a reply with the quoted context attached
 - **`add_contact_by_wechat_id`** - Add a new contact using a WeChat ID and send a friend request
 - **`publish_moment_without_media`** - Publish a text-only Moments post (no photos or videos); optionally only prepare a draft without posting via `publish=False`
 
@@ -167,3 +168,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details
+

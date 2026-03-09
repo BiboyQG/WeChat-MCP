@@ -13,6 +13,7 @@ from .add_contact_by_wechat_id_utils import (
 from .fetch_messages_by_chat_utils import ChatMessage, fetch_recent_messages
 from .publish_moment_utils import publish_moment_without_media as ax_publish_moment
 from .reply_to_messages_by_chat_utils import send_message
+from .quote_reply_utils import quote_and_reply
 from .wechat_accessibility import get_current_chat_name, open_chat_for_contact
 
 
@@ -238,6 +239,61 @@ def publish_moment_without_media(
         }
 
 
+@mcp.tool()
+def quote_reply_to_message(
+    chat_name: str,
+    target_text: str,
+    reply_message: str,
+) -> dict[str, Any]:
+    """
+    Quote a specific message and send a reply in the given chat.
+
+    This will:
+    - Open the specified chat (contact or group).
+    - Find the message whose text contains ``target_text``.
+    - Right-click on that message and select "Quote" from the context
+      menu.
+    - Type the reply text and send it with the quoted message attached.
+
+    The ``target_text`` should be a unique substring of the message you
+    want to quote. If the chat is already open, it will not re-navigate.
+    """
+    logger.info(
+        "Tool quote_reply_to_message called for chat=%s, target=%r",
+        chat_name,
+        target_text,
+    )
+    try:
+        current_chat = get_current_chat_name()
+        same_chat = current_chat == chat_name if current_chat is not None else False
+        if not same_chat:
+            open_result = open_chat_for_contact(chat_name)
+            if isinstance(open_result, dict) and open_result.get("error"):
+                return {
+                    "error": open_result.get("error"),
+                    "chat_name": chat_name,
+                    "candidates": open_result.get("candidates", {}),
+                    "sent": False,
+                }
+
+        result = quote_and_reply(
+            target_text=target_text,
+            reply_text=reply_message,
+        )
+        result["chat_name"] = chat_name
+        return result
+    except Exception as exc:
+        logger.exception(
+            "Error in quote_reply_to_message for chat=%s: %s",
+            chat_name,
+            exc,
+        )
+        return {
+            "error": str(exc),
+            "chat_name": chat_name,
+        }
+
+
 def main() -> None:
     """
     Entry point for the WeChat MCP server.
@@ -284,3 +340,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

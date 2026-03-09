@@ -16,6 +16,7 @@
 
 - 📨 获取任何聊天（联系人或群组）的最近消息
 - ✍️ 基于聊天历史自动发送回复
+- 💬 引用特定消息并发送带上下文的回复
 - 📷 发布纯文字朋友圈消息，并可设置仅创建草稿
 - 👥 通过微信号添加联系人并配置隐私选项
 - 🔍 智能聊天搜索，支持精确名称匹配
@@ -112,6 +113,7 @@ wechat-mcp --transport sse
 
 - **`fetch_messages_by_chat`** - 获取聊天的最近消息
 - **`reply_to_messages_by_chat`** - 向聊天发送回复
+- **`quote_reply_to_message`** - 引用特定消息并发送带引用上下文的回复
 - **`add_contact_by_wechat_id`** - 通过微信号添加联系人并发送好友申请
 - **`publish_moment_without_media`** - 发布纯文字朋友圈（无图片或视频），也可以通过 `publish=False` 仅填充草稿而不真正发布
 
@@ -167,3 +169,4 @@ uv run wechat-mcp --transport stdio
 ## 许可证
 
 MIT License - 详见 [LICENSE](../LICENSE) 文件
+
