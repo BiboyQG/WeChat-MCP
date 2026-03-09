@@ -337,8 +337,8 @@ function App() {
                 <span className="hero-pill-badge">New</span>
                 <span>
                   {language === 'en'
-                    ? 'v0.1.0 • Now available on PyPI'
-                    : 'v0.1.0 • 首次发布到 PyPI'}
+                    ? 'v0.2.0 • New tools and packaging fixes on PyPI'
+                    : 'v0.2.0 • PyPI 新增工具与安装修复'}
                 </span>
               </p>
               <h1 className="hero-title">{t.hero.title}</h1>
@@ -476,6 +476,87 @@ function App() {
                 <h2 className="section-title">{t.changelog.title}</h2>
                 <p className="changelog-subtitle">{t.changelog.subtitle}</p>
               </header>
+
+              <article className="release-card">
+                <header className="release-header">
+                  <div>
+                    <div className="release-version">v0.2.0</div>
+                    <div className="release-label">
+                      {language === 'en'
+                        ? 'Packaging fix and expanded toolset'
+                        : '安装修复与工具扩展'}
+                    </div>
+                  </div>
+                  <div className="release-badges">
+                    <span className="release-pill">PyPI • wechat-mcp-server</span>
+                    <span className="release-pill release-pill-soft">
+                      {language === 'en' ? 'Alpha' : '测试版'}
+                    </span>
+                  </div>
+                </header>
+
+                <p className="release-summary">
+                  {language === 'en'
+                    ? 'v0.2.0 adds contact and Moments automation while fixing the wheel packaging issue so installed wechat-mcp commands work correctly after pip install.'
+                    : 'v0.2.0 新增了联系人与朋友圈自动化能力，并修复了 wheel 打包问题，使通过 pip 安装后的 wechat-mcp 命令可以正常运行。'}
+                </p>
+
+                <div className="release-install">
+                  <div className="release-install-label">
+                    {language === 'en' ? 'Upgrade' : '升级'}
+                  </div>
+                  <pre className="code-snippet">
+                    <code>pip install -U wechat-mcp-server</code>
+                  </pre>
+                </div>
+
+                <div className="release-section">
+                  <h3>{language === 'en' ? 'Highlights' : '亮点'}</h3>
+                  <ul>
+                    <li>
+                      {language === 'en'
+                        ? 'Added add_contact_by_wechat_id to search a WeChat ID, open the add-contact flow, and send a friend request with optional remark, tags, and privacy settings.'
+                        : '新增 add_contact_by_wechat_id，可按微信号搜索联系人、打开加好友流程，并携带备注、标签和隐私选项发送好友申请。'}
+                    </li>
+                    <li>
+                      {language === 'en'
+                        ? 'Added publish_moment_without_media for text-only Moments posts, including a draft-only mode with publish=False.'
+                        : '新增 publish_moment_without_media，可发布纯文字朋友圈，并支持通过 publish=False 仅生成草稿。'}
+                    </li>
+                    <li>
+                      {language === 'en'
+                        ? 'Fixed the published wheel so pip installs now include the importable wechat_mcp package and a working wechat-mcp CLI.'
+                        : '修复已发布 wheel 的内容，使 pip 安装后会正确包含可导入的 wechat_mcp 包和可用的 wechat-mcp 命令。'}
+                    </li>
+                    <li>
+                      {language === 'en'
+                        ? 'Improved search clearing, chat selection reliability, and Moments composer timing for more stable automation.'
+                        : '改进搜索框清理、聊天选择稳定性和朋友圈编辑器交互时序，提升自动化可靠性。'}
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="release-section">
+                  <h3>{language === 'en' ? 'Since v0.1.0' : '相较 v0.1.0'}</h3>
+                  <ul>
+                    <li>
+                      {language === 'en'
+                        ? 'Added two user-facing MCP tools: add_contact_by_wechat_id(...) and publish_moment_without_media(...).'
+                        : '新增两个面向用户的 MCP 工具：add_contact_by_wechat_id(...) 与 publish_moment_without_media(...).'}
+                    </li>
+                    <li>
+                      {language === 'en'
+                        ? 'Expanded setup documentation for Claude Desktop, Codex, and local uv-based development.'
+                        : '补充了 Claude Desktop、Codex 与本地 uv 开发的配置文档。'}
+                    </li>
+                    <li>
+                      {language === 'en'
+                        ? 'Split smoke scripts by tool and cleaned up test and documentation coverage around the new flows.'
+                        : '按工具拆分了 smoke 脚本，并补充了围绕新流程的测试与文档整理。'}
+                    </li>
+                  </ul>
+                </div>
+              </article>
 
               <article className="release-card">
                 <header className="release-header">
