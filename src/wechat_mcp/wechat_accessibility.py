@@ -85,11 +85,32 @@ def get_wechat_ax_app() -> Any:
         raise RuntimeError("WeChat is not running")
 
     app = apps[0]
-    app.activateWithOptions_(AppKit.NSApplicationActivateIgnoringOtherApps)
+    # app.activateWithOptions_(AppKit.NSApplicationActivateIgnoringOtherApps)
     logger.info(
         "Activated WeChat (bundle_id=%s, pid=%s)", bundle_id, app.processIdentifier()
     )
     return AXUIElementCreateApplication(app.processIdentifier())
+
+
+def get_wechat_pid() -> int:
+    """Return the PID of the running WeChat process."""
+    bundle_id = "com.tencent.xinWeChat"
+    apps = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_(
+        bundle_id
+    )
+    if not apps:
+        raise RuntimeError("WeChat is not running")
+    return apps[0].processIdentifier()
+
+
+def hide_wechat() -> None:
+    """Hide the WeChat application window."""
+    bundle_id = "com.tencent.xinWeChat"
+    apps = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_(
+        bundle_id
+    )
+    if apps:
+        apps[0].hide()
 
 
 def _find_window_by_title(ax_app: Any, title: str):
@@ -332,6 +353,14 @@ def open_chat_for_contact(chat_name: str) -> dict[str, Any] | None:
     Callers can use this to ask the LLM to choose a more specific target.
     """
     logger.info("Opening chat for name: %s", chat_name)
+    # The AX tree is not fully exposed when WeChat is in the background.
+    # Temporarily activate WeChat for navigation, then hide it after the chat
+    # is open. Text input and send work fine in the background.
+    bundle_id = "com.tencent.xinWeChat"
+    wechat_app = AppKit.NSRunningApplication.runningApplicationsWithBundleIdentifier_(bundle_id)[0]
+    wechat_app.activateWithOptions_(AppKit.NSApplicationActivateIgnoringOtherApps)
+    time.sleep(0.2)
+
     ax_app = get_wechat_ax_app()
 
     element = find_chat_element_by_name(ax_app, chat_name)

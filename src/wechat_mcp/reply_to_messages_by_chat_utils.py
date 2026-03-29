@@ -12,26 +12,25 @@ from ApplicationServices import (
 )
 from Quartz import (
     CGEventCreateKeyboardEvent,
-    CGEventPost,
+    CGEventPostToPid,
     CGEventSetFlags,
-    kCGHIDEventTap,
 )
 
 from .logging_config import logger
-from .wechat_accessibility import dfs, get_wechat_ax_app
+from .wechat_accessibility import dfs, get_wechat_ax_app, get_wechat_pid
 
 
-def press_return() -> None:
+def press_return(pid: int) -> None:
     """
-    Synthesize a Return key press.
+    Synthesize a Return key press directed at the given process PID.
     """
     keycode_return = 36
     event_down = CGEventCreateKeyboardEvent(None, keycode_return, True)
     CGEventSetFlags(event_down, 0)
     event_up = CGEventCreateKeyboardEvent(None, keycode_return, False)
     CGEventSetFlags(event_up, 0)
-    CGEventPost(kCGHIDEventTap, event_down)
-    CGEventPost(kCGHIDEventTap, event_up)
+    CGEventPostToPid(pid, event_down)
+    CGEventPostToPid(pid, event_up)
 
 
 def find_input_field(ax_app: Any):
@@ -66,5 +65,6 @@ def send_message(text: str) -> None:
         raise RuntimeError(f"Failed to set input text, AX error {err}")
 
     time.sleep(0.1)
-    press_return()
+    pid = get_wechat_pid()
+    press_return(pid)
     logger.info("Message sent")
