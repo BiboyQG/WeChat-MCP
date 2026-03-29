@@ -136,6 +136,28 @@ def count_colored_pixels(
 SenderLabel = Literal["ME", "OTHER", "UNKNOWN"]
 
 
+def classify_sender_by_position(
+    list_origin, list_size, message_pos, message_size
+) -> SenderLabel:
+    """
+    Classify sender purely from AX coordinates: messages from ME are
+    right-aligned, messages from OTHER are left-aligned.
+    """
+    list_x, _ = list_origin
+    list_w, _ = list_size
+    msg_x, _ = message_pos
+    msg_w, _ = message_size
+
+    list_center_x = list_x + list_w / 2.0
+    msg_center_x = msg_x + msg_w / 2.0
+
+    if msg_center_x > list_center_x * 1.05:
+        return "ME"
+    if msg_center_x < list_center_x * 0.95:
+        return "OTHER"
+    return "UNKNOWN"
+
+
 def classify_sender_for_message(
     image, list_origin, message_pos, message_size
 ) -> SenderLabel:
@@ -219,9 +241,12 @@ def fetch_recent_messages(
     scrolls = 0
     no_new_counter = 0
 
-    while True:
-        image, list_origin, _ = capture_message_area(msg_list)
+    list_pos_ref = ax_get(msg_list, kAXPositionAttribute)
+    list_size_ref = ax_get(msg_list, kAXSizeAttribute)
+    list_origin = axvalue_to_point(list_pos_ref)
+    list_size = axvalue_to_size(list_size_ref)
 
+    while True:
         children = ax_get(msg_list, kAXChildrenAttribute) or []
         visible: list[ChatMessage] = []
 
@@ -234,10 +259,10 @@ def fetch_recent_messages(
             size_ref = ax_get(child, kAXSizeAttribute)
             point = axvalue_to_point(pos_ref)
             size = axvalue_to_size(size_ref)
-            if point is None or size is None:
+            if point is None or size is None or list_origin is None or list_size is None:
                 sender: SenderLabel = "UNKNOWN"
             else:
-                sender = classify_sender_for_message(image, list_origin, point, size)
+                sender = classify_sender_by_position(list_origin, list_size, point, size)
 
             visible.append(ChatMessage(sender=sender, text=str(text)))
 

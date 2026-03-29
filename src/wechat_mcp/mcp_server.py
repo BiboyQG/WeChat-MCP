@@ -13,7 +13,7 @@ from .add_contact_by_wechat_id_utils import (
 from .fetch_messages_by_chat_utils import ChatMessage, fetch_recent_messages
 from .publish_moment_utils import publish_moment_without_media as ax_publish_moment
 from .reply_to_messages_by_chat_utils import send_message
-from .wechat_accessibility import get_current_chat_name, open_chat_for_contact
+from .wechat_accessibility import get_current_chat_name, hide_wechat, open_chat_for_contact
 
 
 mcp = FastMCP("WeChat Helper MCP Server")
@@ -57,6 +57,7 @@ def fetch_messages_by_chat(
                 return [enriched]
 
         messages: list[ChatMessage] = fetch_recent_messages(last_n=last_n)
+        hide_wechat()
         result = [msg.to_dict() for msg in messages]
         logger.info("Returning %d messages for chat=%s", len(result), chat_name)
         return result
@@ -122,6 +123,7 @@ def reply_to_messages_by_chat(
                 }
                 return enriched
 
+        hide_wechat()
         sent = False
         if reply_message is not None and reply_message.strip():
             send_message(reply_message)
