@@ -6,8 +6,10 @@ from typing import Any, Literal
 
 from ApplicationServices import (
     kAXChildrenAttribute,
+    kAXIdentifierAttribute,
     kAXListRole,
     kAXPositionAttribute,
+    kAXRoleAttribute,
     kAXSizeAttribute,
     kAXTitleAttribute,
     kAXValueAttribute,
@@ -26,18 +28,70 @@ from .wechat_accessibility import (
 )
 
 
+# WeChat 4.x message-cell identifier prefixes. Any descendant whose
+# AXIdentifier starts with one of these makes its enclosing AXTable
+# unmistakably the conversation pane.
+_MESSAGE_CELL_PREFIX = "MM"
+_MESSAGE_CELL_SUFFIXES = (
+    "MessageCellView",
+    "TimeStampCellView",
+)
+
+
+def _looks_like_message_cell_id(identifier: str) -> bool:
+    if not isinstance(identifier, str):
+        return False
+    if not identifier.startswith(_MESSAGE_CELL_PREFIX):
+        return False
+    return any(suffix in identifier for suffix in _MESSAGE_CELL_SUFFIXES)
+
+
 def get_messages_list(ax_app: Any) -> Any:
     """
-    Find the AX list that contains chat messages in the current WeChat window.
+    Find the AX element that contains chat messages in the current WeChat
+    window.
+
+    WeChat 3.x exposed this as an AXList titled "Messages". WeChat 4.x
+    SwiftUI replaced it with an AXTable whose row children carry
+    `MM*MessageCellView` / `MMTimeStampCellView` identifiers. We try the
+    legacy match first and fall back to a structural match.
     """
 
-    def is_message_list(el, role, title, identifier):
+    def is_legacy_list(el, role, title, identifier):
         return role == kAXListRole and (title or "") == "Messages"
 
-    msg_list = dfs(ax_app, is_message_list)
-    if msg_list is None:
-        raise RuntimeError("Could not find WeChat 'Messages' list in AX tree")
-    return msg_list
+    msg_list = dfs(ax_app, is_legacy_list)
+    if msg_list is not None:
+        return msg_list
+
+    # 4.x fallback: find an AXTable whose subtree contains MM*CellView ids.
+    found: list[Any] = []
+
+    def has_message_cell_descendant(element, depth: int = 0) -> bool:
+        if depth > 6:
+            return False
+        identifier = ax_get(element, kAXIdentifierAttribute)
+        if _looks_like_message_cell_id(identifier or ""):
+            return True
+        for child in ax_get(element, kAXChildrenAttribute) or []:
+            if has_message_cell_descendant(child, depth + 1):
+                return True
+        return False
+
+    def walk(element, depth: int = 0) -> None:
+        if depth > 16 or found:
+            return
+        role = ax_get(element, kAXRoleAttribute)
+        if role == "AXTable" and has_message_cell_descendant(element):
+            found.append(element)
+            return
+        for child in ax_get(element, kAXChildrenAttribute) or []:
+            walk(child, depth + 1)
+
+    walk(ax_app, 0)
+    if found:
+        return found[0]
+    raise RuntimeError("Could not find WeChat 'Messages' list in AX tree")
 
 
 def capture_message_area(msg_list: Any):
@@ -184,6 +238,27 @@ def classify_sender_for_message(
     return "UNKNOWN"
 
 
+def _find_message_cell_view(row: Any, max_depth: int = 5) -> Any:
+    """
+    In WeChat 4.x, each AXRow inside the conversation AXTable contains an
+    AXCell wrapping an AXUnknown whose AXIdentifier matches one of the
+    `MM*MessageCellView` / `MMTimeStampCellView` patterns. That inner
+    element is what carries the human-readable message text in AXTitle.
+    Walk the row's subtree to find it.
+    """
+    stack: list[tuple[Any, int]] = [(row, 0)]
+    while stack:
+        node, depth = stack.pop()
+        if depth > max_depth:
+            continue
+        identifier = ax_get(node, kAXIdentifierAttribute)
+        if _looks_like_message_cell_id(identifier or ""):
+            return node
+        for child in ax_get(node, kAXChildrenAttribute) or []:
+            stack.append((child, depth + 1))
+    return None
+
+
 @dataclass
 class ChatMessage:
     sender: SenderLabel
@@ -227,11 +302,25 @@ def fetch_recent_messages(
 
         for child in children:
             text = ax_get(child, kAXValueAttribute) or ax_get(child, kAXTitleAttribute)
+            cell_for_classify = child  # 3.x: child is the message itself
             if not text:
-                continue
+                # 4.x AXTable layout: child is AXRow → AXCell → AXUnknown
+                # whose AXIdentifier matches MM*MessageCellView and whose
+                # AXTitle holds the formatted "sender说:body" text.
+                inner = _find_message_cell_view(child)
+                if inner is None:
+                    continue
+                identifier = ax_get(inner, kAXIdentifierAttribute) or ""
+                if "TimeStampCellView" in identifier:
+                    # Skip pure timestamp dividers in 4.x.
+                    continue
+                text = ax_get(inner, kAXTitleAttribute) or ax_get(inner, kAXValueAttribute)
+                if not text:
+                    continue
+                cell_for_classify = inner
 
-            pos_ref = ax_get(child, kAXPositionAttribute)
-            size_ref = ax_get(child, kAXSizeAttribute)
+            pos_ref = ax_get(cell_for_classify, kAXPositionAttribute)
+            size_ref = ax_get(cell_for_classify, kAXSizeAttribute)
             point = axvalue_to_point(pos_ref)
             size = axvalue_to_size(size_ref)
             if point is None or size is None:
