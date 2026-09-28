@@ -12,6 +12,8 @@
 
 一个基于 macOS 无障碍 API 和屏幕截图的 MCP 服务器，可自动化操作微信。它让 LLM 能够以编程方式与微信聊天进行交互。
 
+> 面向 **macOS 微信 4.x**（在 4.1.13 英文界面上验证）。服务器会在每次调用时检查已安装/正在运行的微信版本，发现升级到未验证版本、升级后未重启、或界面元素缺失时，会在返回结果的 `warnings` / `diagnostics` 中提示。新增工具：`list_chats`（会话列表）、`check_wechat_compatibility`（兼容性报告）；`fetch_messages_by_chat` 现在返回 `sender_name` 与 `kind`，`reply_to_messages_by_chat` 只在确认打开了正确会话后才发送。需同时授予「辅助功能」和「屏幕录制」权限。
+
 ## 功能特性
 
 - 📨 获取任何聊天（联系人或群组）的最近消息

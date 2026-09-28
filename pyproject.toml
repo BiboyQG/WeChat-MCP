@@ -1,7 +1,7 @@
 [project]
 name = "wechat-mcp-server"
-version = "0.2.0"
-description = "WeChat MCP server for reading and replying to messages via macOS Accessibility APIs"
+version = "0.3.0"
+description = "WeChat MCP server for reading and replying to messages via macOS Accessibility APIs (WeChat 4.x)"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "Banghao Chi", email = "banghao2@illinois.edu" }]
@@ -38,8 +38,15 @@ Repository = "https://github.com/BiboyQG/WeChat-MCP.git"
 Issues = "https://github.com/BiboyQG/WeChat-MCP/issues"
 Documentation = "https://github.com/BiboyQG/WeChat-MCP#readme"
 
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [project.scripts]
 wechat-mcp = "wechat_mcp.mcp_server:main"
+wechat-cli = "wechat_mcp.cli:main"
 
 [build-system]
 requires = ["hatchling"]

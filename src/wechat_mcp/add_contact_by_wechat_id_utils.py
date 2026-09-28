@@ -4,13 +4,16 @@ import time
 from typing import Any
 
 from ApplicationServices import (
+    AXUIElementPerformAction,
     AXUIElementSetAttributeValue,
     kAXButtonRole,
     kAXCheckBoxRole,
     kAXChildrenAttribute,
     kAXPositionAttribute,
     kAXRoleAttribute,
+    kAXPressAction,
     kAXStaticTextRole,
+    kAXSubroleAttribute,
     kAXTextAreaRole,
     kAXTextFieldRole,
     kAXValueAttribute,
@@ -24,13 +27,41 @@ from .wechat_accessibility import (
     axvalue_to_point,
     click_element_center,
     dfs,
+    close_search,
     focus_and_type_search,
     get_search_list,
     get_wechat_ax_app,
 )
 
+SEARCH_ID_CARD_LABELS = ("Search WeChat ID", "Search Weixin ID", "搜索微信号")
+ADD_CONTACTS_WINDOW_TITLES = ("Add Contacts", "添加朋友")
+ADD_TO_CONTACTS_TITLES = ("Add to Contacts", "添加到通讯录")
+NOT_FOUND_MARKERS = ("No related account", "not found", "无法找到", "未找到")
 
-def _click_more_card_by_title(ax_app: Any, label: str) -> bool:
+
+def _close_window(window) -> None:
+    """Press the close button of a secondary WeChat window (best effort)."""
+
+    def is_close(el, role, title, identifier):
+        return ax_get(el, kAXSubroleAttribute) == "AXCloseButton"
+
+    button = dfs(window, is_close)
+    if button is not None:
+        AXUIElementPerformAction(button, kAXPressAction)
+        time.sleep(0.3)
+
+
+def _find_static_text_containing(root, markers: tuple[str, ...]):
+    def matches(el, role, title, identifier):
+        if role != kAXStaticTextRole:
+            return False
+        text = ax_get(el, kAXValueAttribute) or title
+        return isinstance(text, str) and any(m in text for m in markers)
+
+    return dfs(root, matches)
+
+
+def _click_more_card_by_title(ax_app: Any, label: str | tuple[str, ...]) -> bool:
     """
     Click a card with the given label in the global search results list.
 
@@ -41,18 +72,19 @@ def _click_more_card_by_title(ax_app: Any, label: str) -> bool:
     search_list = get_search_list(ax_app)
     entries = _collect_search_entries(search_list)
 
-    target = label.strip()
+    labels = (label,) if isinstance(label, str) else label
+    targets = [lbl.strip() for lbl in labels]
     for entry in entries:
         text = entry.text
         if not text:
             continue
-        if text == target or text.startswith(f"{target}:"):
+        if any(text == t or text.startswith(f"{t}:") for t in targets):
             logger.info("Clicking %r entry in search results", text)
             click_element_center(entry.element)
             time.sleep(0.4)
             return True
 
-    logger.warning("Did not find %r entry in search results", target)
+    logger.warning("Did not find %r entry in search results", targets)
     return False
 
 
@@ -66,7 +98,7 @@ def _click_add_to_contacts_button(add_contacts_window) -> None:
             return False
         if identifier == "add_friend_button":
             return True
-        if isinstance(title, str) and title == "Add to Contacts":
+        if isinstance(title, str) and title in ADD_TO_CONTACTS_TITLES:
             return True
         return False
 
@@ -288,11 +320,12 @@ def add_contact_by_wechat_id(
         focus_and_type_search(ax_app, wechat_id)
         time.sleep(0.4)
 
-        # Step 2: click "Search WeChat ID" card in More section
-        if not _click_more_card_by_title(ax_app, "Search WeChat ID"):
+        # Step 2: click the "Search WeChat ID" card in the search results
+        if not _click_more_card_by_title(ax_app, SEARCH_ID_CARD_LABELS):
+            close_search(ax_app)
             error_msg = (
-                "Could not find a 'Search WeChat ID' entry in the "
-                "More section of WeChat's global search results."
+                "Could not find a 'Search WeChat ID' entry in WeChat's "
+                "global search results."
             )
             logger.warning(
                 "add_contact_by_wechat_id(%s) failed at Search WeChat ID step",
@@ -305,7 +338,11 @@ def add_contact_by_wechat_id(
             }
 
         # Step 3a: Add Contacts window
-        add_window = _wait_for_window(ax_app, "Add Contacts", timeout=5.0)
+        add_window = None
+        for title in ADD_CONTACTS_WINDOW_TITLES:
+            add_window = _wait_for_window(ax_app, title, timeout=5.0)
+            if add_window is not None:
+                break
         if add_window is None:
             error_msg = (
                 "The 'Add Contacts' window did not appear after selecting "
@@ -317,13 +354,39 @@ def add_contact_by_wechat_id(
                 "stage": "add_contacts_window",
             }
 
-        # Wait a moment for the button to appear
-        time.sleep(2)
+        # Wait for either the profile (with "Add to Contacts") or a
+        # "No related account" notice to be rendered.
+        def is_add_button(el, role, title, identifier):
+            return role == kAXButtonRole and (
+                identifier == "add_friend_button"
+                or (isinstance(title, str) and title in ADD_TO_CONTACTS_TITLES)
+            )
+
+        end = time.time() + 8.0
+        not_found = None
+        while time.time() < end:
+            if dfs(add_window, is_add_button) is not None:
+                break
+            not_found = _find_static_text_containing(add_window, NOT_FOUND_MARKERS)
+            if not_found is not None:
+                break
+            time.sleep(0.2)
+
+        if not_found is not None:
+            notice = ax_get(not_found, kAXValueAttribute) or ""
+            logger.warning("WeChat ID %s not found: %s", wechat_id, notice)
+            _close_window(add_window)
+            return {
+                "error": f"WeChat could not find an account for this ID ({notice}).",
+                "wechat_id": wechat_id,
+                "stage": "account_not_found",
+            }
 
         # Step 3b: Click "Add to Contacts" button
         try:
             _click_add_to_contacts_button(add_window)
         except RuntimeError as e:
+            _close_window(add_window)
             return {
                 "error": str(e),
                 "wechat_id": wechat_id,

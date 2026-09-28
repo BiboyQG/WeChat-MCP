@@ -21,7 +21,9 @@ Opens the chat for `chat_name` (first via the left session list, then via the gl
 
 ```json
 {
-  "sender": "ME" | "OTHER" | "UNKNOWN",
+  "sender": "ME" | "OTHER" | "SYSTEM" | "UNKNOWN",
+  "sender_name": "<contact or group member name, null for your own messages>",
+  "kind": "text" | "image" | "file" | "video" | "sticker" | "voice" | "link" | "card" | "system",
   "text": "message text"
 }
 ```
@@ -120,7 +122,12 @@ Holds the shared, low-level Accessibility helpers and WeChat UI navigation that 
 - `_summarize_search_candidates(entries)` - Extract up to 15 contact + group names
 - `_expand_section_if_needed(search_list, section_title)` - Click "View All"
 - `_select_contact_from_search_results(ax_app, contact_name)` - Smart search with scrolling that ignores non‑contact sections
-- `_find_window_by_title(ax_app, title)` / `_wait_for_window(ax_app, title)` - Locate and wait for top‑level WeChat windows such as `"Add Contacts"`, `"Send Friend Request"`, or `"Moments"`
+- `_find_window_by_title(ax_app, title)` / `_wait_for_window(ax_app, title)` - Locate and wait for top‑level WeChat windows such as `"Add Contacts"` or `"Send Friend Request"`
+- `get_main_window(ax_app)` / `ensure_chats_tab(ax_app)` - Resolve the main window (never the search popover) and switch back to the Chats tab when Contacts/Discover/Moments is showing
+- `find_chat_element_by_name(ax_app, name)` - Scrolls the virtualised session list (only rendered rows are exposed) until the row is found
+- `list_session_chats(ax_app, max_chats, scroll)` / `parse_session_title(...)` - Sidebar rows with preview, time and mute state (backs the `list_chats` tool)
+- `set_text_value(element, text)` - Writes text through `AXValue` (WeChat 4.x accepts it) and only falls back to clipboard paste when the value did not stick
+- `get_frontmost_bundle_id()` / `activate_bundle(...)` - Focus handling based on the window server's front-to-back list (NSWorkspace is stale without a run loop)
 - `click_element_center(element)` / `long_press_element_center(element, hold_seconds)` - Click or long‑press the visual center of an AX element
 
 #### `src/wechat_mcp/add_contact_by_wechat_id_utils.py`
@@ -139,9 +146,9 @@ Implements the Accessibility flow for adding contacts by WeChat ID:
 
 Implements the Accessibility flow for publishing a Moments post without media:
 
-- `publish_moment_without_media(content, publish=True)` - Drive the full `"WeChat" main window` → `"Moments"` window → long‑press `"Post"` → composer sheet → `"Post"` flow for text‑only Moments. When `publish=False`, the composer is filled but the final `"Post"` button is not clicked, leaving the sheet open.
+- `publish_moment_without_media(content, publish=True)` - Show Moments (Window menu → Moments, or Discover → Moments; in WeChat 4.x Moments renders inside the main window as `sns_list`), long‑press the toolbar `"Post"` button, fill the composer sheet and click its `"Post"` button, then return to the Chats tab. When `publish=False`, the composer is filled but the final `"Post"` button is not clicked, leaving the sheet open.
 - Helper functions:
-  - `_open_moments_window(ax_app, timeout)` - Click the `"Moments"` button and wait for the `"Moments"` window
+  - `_open_moments_window(ax_app, timeout)` - Show Moments and return the element hosting it (main window on 4.x, separate window on 3.x)
   - `_open_moment_composer(moments_window)` - Long‑press the `"Post"` button to reveal the composer sheet
   - `_find_editor_root(moments_window, timeout)` - Prefer the AXSheet composer root, fallback to the `"Moments"` window
   - `_find_moment_text_area(root)` - Locate the text entry area inside the composer
@@ -159,7 +166,9 @@ Holds the message-list specific logic used by `fetch_messages_by_chat`:
   2. Repeatedly scrolls up in small steps
   3. Captures screenshot of message area at each position
   4. Collects visible messages and their positions/sizes
-  5. Classifies sender as `"ME"`/`"OTHER"`/`"UNKNOWN"` using pixel analysis
+  5. Classifies sender as `"ME"`/`"OTHER"`/`"UNKNOWN"` from the capture: every bubble row is full width in the AX tree, so the side the content hugs (left = other party, right = you) decides, with WeChat's green as tie-breaker; the overlay scrollbar strip is ignored. Timestamps/notices become `"SYSTEM"` rows
+  6. In group chats, OCRs (Apple Vision) the name strip above incoming bubbles into `sender_name`
+  7. Skips activation entirely when the rendered rows already cover `last_n` and the session-row preview confirms the list is at the newest message; captures use `CGWindowListCreateImage`, which works while WeChat is behind other windows
   6. Merges newly revealed older messages by aligning on anchor text
   7. Continues until `last_n` messages collected or history exhausted
 - `capture_message_area(msg_list)` - Take screenshot of message area
@@ -170,7 +179,24 @@ Holds the message-list specific logic used by `fetch_messages_by_chat`:
 - `SenderLabel = Literal["ME", "OTHER", "UNKNOWN"]` - Sender type
 - `ChatMessage` - Dataclass wrapping `sender` + `text` with `.to_dict()`
 - `count_colored_pixels(image, left, top, right, bottom)` - Image processing helper
-- `classify_sender_for_message(image, list_origin, message_pos, message_size)` - Pixel-based heuristic used by `fetch_recent_messages`
+- `classify_sender_for_message(image, list_origin, message_pos, message_size, background)` - Alignment-based heuristic used by `fetch_recent_messages` (light and dark theme)
+- `message_kind(text, sender)` / `read_group_sender_name(...)` / `preview_matches_text(...)` - Kind detection, OCR of group member names, at-bottom detection
+
+#### `cli.py`
+
+- `wechat-cli {fetch,send,open,chats,current,check,moment,add-contact}` - Thin command line front end over the MCP tool functions (JSON or `--text`, non-zero exit on failure)
+
+#### `capture.py`
+
+- `find_window_id(pid, frame)` / `capture_window_region(window_id, window_frame, region)` - Window-server capture of the message list (needs Screen Recording; falls back to `ImageGrab`)
+- `recognize_text(image)` - Vision text recognition (zh-Hans + en-US)
+
+#### `compat.py`
+
+- `TESTED_WECHAT_VERSIONS` - Versions the flows were verified against
+- `get_version_info()` - Installed vs. running version, classification (`tested`, `same_series`, `newer`, `older`), pending-restart detection
+- `probe_ui(ax_app)` - Presence check of the required Accessibility identifiers
+- `compatibility_report()` / `failure_context()` - Used by `check_wechat_compatibility`, `wechat-mcp --check` and the `diagnostics` block on tool errors
 
 #### `src/wechat_mcp/reply_to_messages_by_chat_utils.py`
 
@@ -294,4 +320,14 @@ The search implementation prefers exact matches. If a contact name is not found:
 - [x] Publish moment w/o media
 - [ ] Fetch moments by chat name
 - [ ] Support WeChat with Chinese language
-- [ ] Identify OTHER with explicit name
+- [x] Identify OTHER with explicit name (group chats via OCR)
+- [x] Detect WeChat updates and missing UI elements
+
+
+## Verified WeChat versions
+
+| WeChat for Mac | UI language | Notes |
+|----------------|-------------|-------|
+| 4.1.13 (269602) | English | All tools verified on 2026-09-28; light and dark theme |
+
+When a new WeChat release lands, run `uv run wechat-mcp --check` (or the `check_wechat_compatibility` tool). If every required element is found and the tools work, add the version to `TESTED_WECHAT_VERSIONS` in `src/wechat_mcp/compat.py` and extend this table.

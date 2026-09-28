@@ -21,6 +21,9 @@ def setup_logging() -> logging.Logger:
         return logger
 
     logger.setLevel(logging.DEBUG)
+    # The MCP SDK installs a rich handler on the root logger; without this
+    # every line would be printed twice on the console.
+    logger.propagate = False
 
     formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s - %(message)s")
 
